@@ -32,6 +32,13 @@
 			"service": "kawalerski-matiego"
 		}
 	],
+	"workers_dev": true,
+	"routes": [
+		{
+			"pattern": "kawalerski-matiego.pl",
+			"custom_domain": true
+		}
+	],
 	"d1_databases": [
 		{
 			"binding": "DB",

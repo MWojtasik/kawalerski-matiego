@@ -15,6 +15,7 @@ export default function SetupPage() {
 	const [selectedDisciplines, setSelectedDisciplines] = useState<number[] | null>(null);
 	const [groupSize, setGroupSize] = useState(4);
 	const [error, setError] = useState<string | null>(null);
+	const [joining, setJoining] = useState(false);
 	const [drawing, setDrawing] = useState(false);
 	const [resetOpen, setResetOpen] = useState(false);
 	const [pin, setPin] = useState("");
@@ -42,7 +43,8 @@ export default function SetupPage() {
 
 	async function join() {
 		const trimmed = name.trim();
-		if (!trimmed) return;
+		if (!trimmed || joining) return;
+		setJoining(true);
 		try {
 			await run(async () => {
 				const created = await api<{ id: number }>("/api/players", {
@@ -54,6 +56,8 @@ export default function SetupPage() {
 			});
 		} catch {
 			return;
+		} finally {
+			setJoining(false);
 		}
 		setName("");
 		setEmoji(null);
@@ -175,10 +179,10 @@ export default function SetupPage() {
 					<button
 						type="button"
 						onClick={join}
-						disabled={!name.trim() || chosenDisciplines.length === 0}
+						disabled={!name.trim() || chosenDisciplines.length === 0 || joining}
 						className="rounded-2xl bg-accent py-3.5 text-lg font-bold text-black disabled:opacity-40"
 					>
-						Dołączam 🍻
+						{joining ? "Zapisuję… ⏳" : "Dołączam 🍻"}
 					</button>
 				</section>
 			)}
