@@ -3,11 +3,23 @@ import { getEnv } from "@/lib/db";
 
 export async function POST(request: Request) {
 	const env = await getEnv();
-	const body = (await request.json()) as { pin?: string; scope?: "draw" | "all" };
+	const body = (await request.json()) as {
+		pin?: string;
+		scope?: "discipline" | "draw" | "all";
+		disciplineId?: number;
+	};
 	if (env.ADMIN_PIN && body.pin !== env.ADMIN_PIN) {
 		return NextResponse.json({ error: "Zły PIN" }, { status: 403 });
 	}
 	const db = env.DB;
+	if (body.scope === "discipline") {
+		if (!body.disciplineId) {
+			return NextResponse.json({ error: "Brak dyscypliny" }, { status: 400 });
+		}
+		await db.prepare("DELETE FROM matches WHERE discipline_id = ?").bind(body.disciplineId).run();
+		await db.prepare("DELETE FROM teams WHERE discipline_id = ?").bind(body.disciplineId).run();
+		return NextResponse.json({ ok: true });
+	}
 	await db.prepare("DELETE FROM matches").run();
 	await db.prepare("DELETE FROM teams").run();
 	if (body.scope === "all") {
