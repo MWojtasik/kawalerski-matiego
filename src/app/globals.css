@@ -1,0 +1,39 @@
+@import "tailwindcss";
+
+:root {
+	--background: #0b0d13;
+	--foreground: #f2f0eb;
+	--accent: #fbbf24;
+}
+
+@theme inline {
+	--color-background: var(--background);
+	--color-foreground: var(--foreground);
+	--color-accent: var(--accent);
+	--font-sans: var(--font-geist-sans);
+	--font-mono: var(--font-geist-mono);
+}
+
+body {
+	background: var(--background);
+	color: var(--foreground);
+}
+
+@keyframes pop-in {
+	0% {
+		opacity: 0;
+		transform: translateY(12px) scale(0.9);
+	}
+	70% {
+		transform: translateY(-2px) scale(1.03);
+	}
+	100% {
+		opacity: 1;
+		transform: translateY(0) scale(1);
+	}
+}
+
+.pop-in {
+	opacity: 0;
+	animation: pop-in 0.45s ease-out forwards;
+}
