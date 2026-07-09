@@ -96,6 +96,7 @@ export default function SetupPage() {
 
 	const eligibleCount = (disciplineId: number) =>
 		state.players.filter((p) => p.disciplineIds.includes(disciplineId)).length;
+	const allDisciplinesReady = state.disciplines.every((d) => eligibleCount(d.id) >= 4);
 
 	return (
 		<main className="flex flex-col gap-6">
@@ -231,7 +232,7 @@ export default function SetupPage() {
 			{!state.lockedSetup && (
 				<section className="flex flex-col gap-3 rounded-3xl border border-accent/20 bg-accent/5 p-4">
 					<h2 className="text-sm font-semibold uppercase tracking-wide text-white/40">
-						Losowanie (dla organizatora)
+						Losowanie
 					</h2>
 					<div>
 						<p className="mb-2 text-[11px] uppercase tracking-wide text-white/40">
@@ -256,20 +257,25 @@ export default function SetupPage() {
 						{state.disciplines.map((d) => (
 							<p key={d.id}>
 								{d.icon} {d.name}: {eligibleCount(d.id)} chętnych
-								{eligibleCount(d.id) < 4 && " — za mało (min. 4), zostanie pominięta"}
+								{eligibleCount(d.id) < 4 && " — potrzeba min. 4"}
 							</p>
 						))}
+						{!allDisciplinesReady && (
+							<p className="mt-1 text-white/40">
+								Losowanie odblokuje się, gdy każda dyscyplina zbierze minimum 4 graczy.
+							</p>
+						)}
 					</div>
 					<input
 						value={drawPin}
 						onChange={(e) => setDrawPin(e.target.value)}
-						placeholder="PIN organizatora"
+						placeholder="PIN"
 						className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none placeholder:text-white/30 focus:border-accent"
 					/>
 					<button
 						type="button"
 						onClick={draw}
-						disabled={drawing || state.players.length < 4 || !drawPin}
+						disabled={drawing || !drawPin || !allDisciplinesReady}
 						className="rounded-2xl bg-accent py-4 text-lg font-bold text-black disabled:opacity-40"
 					>
 						{drawing ? "Losuję… 🎲" : "🎲 Losuj grupy i zaczynamy!"}
@@ -288,9 +294,7 @@ export default function SetupPage() {
 					</button>
 				) : (
 					<div className="flex flex-col gap-3 rounded-2xl border border-red-500/30 bg-red-500/5 p-4">
-						<p className="text-sm text-red-300">
-							Reset kasuje wyniki i losowanie. PIN zna organizator 😉
-						</p>
+						<p className="text-sm text-red-300">Reset kasuje wyniki i losowanie.</p>
 						<input
 							value={pin}
 							onChange={(e) => setPin(e.target.value)}

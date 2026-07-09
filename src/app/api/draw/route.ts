@@ -7,7 +7,7 @@ export async function POST(request: Request) {
 	const db = env.DB;
 	const body = (await request.json().catch(() => ({}))) as { groupSize?: number; pin?: string };
 	if (env.ADMIN_PIN && body.pin !== env.ADMIN_PIN) {
-		return NextResponse.json({ error: "Zły PIN — losuje tylko organizator" }, { status: 403 });
+		return NextResponse.json({ error: "Zły PIN" }, { status: 403 });
 	}
 	const existing = await db.prepare("SELECT COUNT(*) AS n FROM matches").first<{ n: number }>();
 	if ((existing?.n ?? 0) > 0) {
@@ -17,16 +17,18 @@ export async function POST(request: Request) {
 
 	const players = await loadPlayers(db);
 	const disciplines = await loadDisciplines(db);
-	const skipped: string[] = [];
-	let drawnAny = false;
+	const short = disciplines.filter(
+		(d) => players.filter((p) => p.disciplineIds.includes(d.id)).length < 4,
+	);
+	if (short.length > 0) {
+		return NextResponse.json(
+			{ error: `Za mało chętnych (min. 4): ${short.map((d) => d.name).join(", ")}` },
+			{ status: 400 },
+		);
+	}
 
 	for (const discipline of disciplines) {
 		const eligible = players.filter((p) => p.disciplineIds.includes(discipline.id));
-		if (eligible.length < 4) {
-			skipped.push(discipline.name);
-			continue;
-		}
-		drawnAny = true;
 		const groups = splitIntoGroups(
 			shuffle(eligible.map((p) => p.id)),
 			numGroupsFor(eligible.length, groupSize),
@@ -48,12 +50,6 @@ export async function POST(request: Request) {
 		}
 	}
 
-	if (!drawnAny) {
-		return NextResponse.json(
-			{ error: "Żadna dyscyplina nie ma minimum 4 chętnych" },
-			{ status: 400 },
-		);
-	}
 	await setSetting(db, "locked_setup", "1");
-	return NextResponse.json({ ok: true, skipped });
+	return NextResponse.json({ ok: true });
 }
