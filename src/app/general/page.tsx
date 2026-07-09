@@ -10,9 +10,6 @@ export default function GeneralPage() {
 		return <p className="mt-20 text-center text-white/40">Ładowanie…</p>;
 	}
 
-	const finishedCount = state.disciplines.filter(
-		(d) => Object.keys(d.placements).length > 0,
-	).length;
 	const anyPoints = state.general.some((row) => row.points > 0);
 
 	return (
@@ -20,8 +17,7 @@ export default function GeneralPage() {
 			<header>
 				<h1 className="text-2xl font-black">🏆 Klasyfikacja generalna</h1>
 				<p className="mt-1 text-sm text-white/50">
-					Punktacja miejsc w dyscyplinie: 10 · 7 · 5 · 4 · 2 · 1. Rozstrzygnięte:{" "}
-					{finishedCount}/{state.disciplines.length} dyscyplin.
+					1 pkt za każdy wygrany mecz — liczone na żywo, po każdym meczu.
 				</p>
 			</header>
 
@@ -74,8 +70,8 @@ export default function GeneralPage() {
 			)}
 
 			<p className="text-center text-xs text-white/30">
-				– jeszcze nie rozstrzygnięte · ✕ nie gra w tej dyscyplinie. Wygrywa suma punktów; przy
-				remisie liczy się liczba wygranych dyscyplin.
+				– gra, brak wygranych · ✕ nie gra w tej dyscyplinie. Wygrywa suma punktów; przy remisie
+				liczy się liczba wygranych dyscyplin.
 			</p>
 		</main>
 	);

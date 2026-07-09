@@ -366,34 +366,52 @@ export function disciplinePlacements(
 	return placements;
 }
 
-export function pointsForPlace(place: number): number {
-	if (place === 1) return 10;
-	if (place === 2) return 7;
-	if (place === 3) return 5;
-	if (place === 4) return 4;
-	if (place === 5) return 2;
-	return 1;
+/** Decided matches won, per entrant (winnerId), across every stage. */
+export function matchWins(matches: Match[]): Record<number, number> {
+	const wins: Record<number, number> = {};
+	for (const m of matches) {
+		if (m.winnerId !== null) wins[m.winnerId] = (wins[m.winnerId] ?? 0) + 1;
+	}
+	return wins;
+}
+
+/** Both members of a team inherit the team's win count. */
+export function expandTeamWins(
+	entrantWins: Record<number, number>,
+	teams: Team[],
+): Record<number, number> {
+	const result: Record<number, number> = {};
+	for (const team of teams) {
+		const wins = entrantWins[team.id];
+		if (wins) {
+			result[team.playerA] = wins;
+			result[team.playerB] = wins;
+		}
+	}
+	return result;
 }
 
 /**
- * General classification across disciplines. Only disciplines with a decided
- * final contribute points. Point ties broken by number of discipline wins.
+ * Live general classification across disciplines: one point per match won,
+ * counted the moment a result is entered (no waiting for finals). Point ties
+ * broken by number of disciplines won, then player id.
  */
 export function generalClassification(
 	playerIds: number[],
-	placementsBySlug: Record<string, Record<number, number>>,
+	winsBySlug: Record<string, Record<number, number>>,
+	placementsBySlug: Record<string, Record<number, number>> = {},
 ): GeneralRow[] {
 	const rows: GeneralRow[] = playerIds.map((playerId) => {
 		const breakdown: Record<string, number> = {};
-		for (const [slug, placements] of Object.entries(placementsBySlug)) {
-			const place = placements[playerId];
-			if (place !== undefined) breakdown[slug] = pointsForPlace(place);
+		for (const [slug, wins] of Object.entries(winsBySlug)) {
+			const won = wins[playerId];
+			if (won) breakdown[slug] = won;
 		}
 		const points = Object.values(breakdown).reduce((sum, p) => sum + p, 0);
 		return { playerId, points, breakdown };
 	});
-	const winsOf = (row: GeneralRow) =>
-		Object.entries(placementsBySlug).filter(([, p]) => p[row.playerId] === 1).length;
-	rows.sort((x, y) => y.points - x.points || winsOf(y) - winsOf(x) || x.playerId - y.playerId);
+	const titlesOf = (row: GeneralRow) =>
+		Object.values(placementsBySlug).filter((p) => p[row.playerId] === 1).length;
+	rows.sort((x, y) => y.points - x.points || titlesOf(y) - titlesOf(x) || x.playerId - y.playerId);
 	return rows;
 }
