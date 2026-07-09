@@ -1,10 +1,18 @@
 "use client";
 
-import type { GroupState, Match, Player } from "@/lib/types";
+import type { DisciplineFormat, Entrant, GroupState, Match } from "@/lib/types";
 
 const GROUP_LETTERS = ["A", "B", "C", "D"];
 
-function slotLabels(groupCount: number): [string, string][] {
+function slotLabels(groupCount: number, hasQuarters: boolean): [string, string][] {
+	if (groupCount === 0) {
+		// bracket discipline — semis are seeded from the draw or the quarters
+		const slot = hasQuarters ? "Po ćwierćfinałach" : "Drużyna";
+		return [
+			[slot, slot],
+			[slot, slot],
+		];
+	}
 	if (groupCount === 1) {
 		return [
 			["1. z grupy", "4. z grupy"],
@@ -35,7 +43,7 @@ function Slot({
 	winner,
 	loser,
 }: {
-	player: Player | undefined;
+	player: Entrant | undefined;
 	placeholder: string;
 	winner?: boolean;
 	loser?: boolean;
@@ -65,13 +73,13 @@ function Slot({
 function MatchBox({
 	match,
 	labels,
-	playersById,
+	entrantsById,
 	onSelect,
 	title,
 }: {
 	match: Match | undefined;
 	labels: [string, string];
-	playersById: Map<number, Player>;
+	entrantsById: Map<number, Entrant>;
 	onSelect: (match: Match) => void;
 	title: string;
 }) {
@@ -79,13 +87,13 @@ function MatchBox({
 		<div className="flex flex-col gap-1.5">
 			<div className="text-[10px] uppercase tracking-wide text-white/40">{title}</div>
 			<Slot
-				player={match ? playersById.get(match.playerA) : undefined}
+				player={match ? entrantsById.get(match.playerA) : undefined}
 				placeholder={labels[0]}
 				winner={match?.winnerId === match?.playerA && match?.winnerId != null}
 				loser={match?.winnerId != null && match?.winnerId !== match?.playerA}
 			/>
 			<Slot
-				player={match ? playersById.get(match.playerB) : undefined}
+				player={match ? entrantsById.get(match.playerB) : undefined}
 				placeholder={labels[1]}
 				winner={match?.winnerId === match?.playerB && match?.winnerId != null}
 				loser={match?.winnerId != null && match?.winnerId !== match?.playerB}
@@ -107,23 +115,37 @@ function MatchBox({
 export default function Bracket({
 	matches,
 	groups,
-	playersById,
+	entrantsById,
 	onSelect,
+	format = "groups",
 }: {
 	matches: Match[];
 	groups: GroupState[];
-	playersById: Map<number, Player>;
+	entrantsById: Map<number, Entrant>;
 	onSelect: (match: Match) => void;
+	format?: DisciplineFormat;
 }) {
+	const quarters = matches.filter((m) => m.stage === "quarter");
 	const semis = matches.filter((m) => m.stage === "semi");
 	const final = matches.find((m) => m.stage === "final");
 	const third = matches.find((m) => m.stage === "third");
-	const labels = slotLabels(groups.length);
-	const champion = final?.winnerId != null ? playersById.get(final.winnerId) : undefined;
+	const isBracket = format === "bracket2v2";
+	const labels = slotLabels(isBracket ? 0 : groups.length, quarters.length > 0);
+	const champion = final?.winnerId != null ? entrantsById.get(final.winnerId) : undefined;
+	const byes =
+		quarters.length > 0
+			? [...entrantsById.values()].filter(
+					(e) => !quarters.some((m) => m.playerA === e.id || m.playerB === e.id),
+				)
+			: [];
+	// T=2: straight final; T=3: one semi and the double-bye team waits in the final
+	const finalOnly = isBracket && semis.length === 0 && quarters.length === 0;
+	const singleSemi = isBracket && semis.length === 1;
+	const showThird = !isBracket || third !== undefined || semis.length === 2;
 
 	return (
 		<div className="flex flex-col gap-6">
-			{semis.length === 0 && (
+			{!isBracket && semis.length === 0 && (
 				<p className="text-center text-xs text-white/40">
 					Drabinka zapełni się po rozegraniu wszystkich meczów grupowych
 					{groups.length > 1 &&
@@ -131,33 +153,31 @@ export default function Bracket({
 					.
 				</p>
 			)}
-			<div className="grid grid-cols-[1fr_20px_1fr] items-stretch">
-				<div className="flex flex-col justify-around gap-4">
-					<MatchBox
-						match={semis[0]}
-						labels={labels[0]}
-						playersById={playersById}
-						onSelect={onSelect}
-						title="Półfinał 1"
-					/>
-					<MatchBox
-						match={semis[1]}
-						labels={labels[1]}
-						playersById={playersById}
-						onSelect={onSelect}
-						title="Półfinał 2"
-					/>
+			{quarters.length > 0 && (
+				<div className="flex flex-col gap-2">
+					{quarters.map((m, index) => (
+						<MatchBox
+							key={m.id}
+							match={m}
+							labels={labels[0]}
+							entrantsById={entrantsById}
+							onSelect={onSelect}
+							title={`Ćwierćfinał ${index + 1}`}
+						/>
+					))}
+					{byes.length > 0 && (
+						<p className="text-xs text-white/40">
+							Wolny los do półfinału: {byes.map((e) => `${e.emoji} ${e.name}`).join(", ")}
+						</p>
+					)}
 				</div>
-				{/* bracket connectors */}
-				<div className="relative">
-					<div className="absolute left-1 top-[22%] h-[56%] w-[10px] rounded-r-md border-y-2 border-r-2 border-white/15" />
-					<div className="absolute right-0 top-1/2 h-0 w-[9px] border-t-2 border-white/15" />
-				</div>
-				<div className="flex flex-col justify-center gap-3">
+			)}
+			{finalOnly ? (
+				<div className="flex flex-col gap-3">
 					<MatchBox
 						match={final}
-						labels={["Zwycięzca PF1", "Zwycięzca PF2"]}
-						playersById={playersById}
+						labels={["Drużyna", "Drużyna"]}
+						entrantsById={entrantsById}
 						onSelect={onSelect}
 						title="Finał 🏆"
 					/>
@@ -167,16 +187,64 @@ export default function Bracket({
 						</div>
 					)}
 				</div>
-			</div>
-			<div className="mx-auto w-full max-w-[calc(50%+10px)] sm:max-w-[280px]">
-				<MatchBox
-					match={third}
-					labels={["Przegrany PF1", "Przegrany PF2"]}
-					playersById={playersById}
-					onSelect={onSelect}
-					title="Mecz o 3. miejsce 🥉"
-				/>
-			</div>
+			) : (
+				<div className="grid grid-cols-[1fr_20px_1fr] items-stretch">
+					<div className="flex flex-col justify-around gap-4">
+						<MatchBox
+							match={semis[0]}
+							labels={labels[0]}
+							entrantsById={entrantsById}
+							onSelect={onSelect}
+							title="Półfinał 1"
+						/>
+						{!singleSemi && (
+							<MatchBox
+								match={semis[1]}
+								labels={labels[1]}
+								entrantsById={entrantsById}
+								onSelect={onSelect}
+								title="Półfinał 2"
+							/>
+						)}
+					</div>
+					{/* bracket connectors */}
+					<div className="relative">
+						{singleSemi ? (
+							<div className="absolute right-0 top-1/2 h-0 w-full border-t-2 border-white/15" />
+						) : (
+							<>
+								<div className="absolute left-1 top-[22%] h-[56%] w-[10px] rounded-r-md border-y-2 border-r-2 border-white/15" />
+								<div className="absolute right-0 top-1/2 h-0 w-[9px] border-t-2 border-white/15" />
+							</>
+						)}
+					</div>
+					<div className="flex flex-col justify-center gap-3">
+						<MatchBox
+							match={final}
+							labels={singleSemi ? ["Wolny los", "Zwycięzca PF"] : ["Zwycięzca PF1", "Zwycięzca PF2"]}
+							entrantsById={entrantsById}
+							onSelect={onSelect}
+							title="Finał 🏆"
+						/>
+						{champion && (
+							<div className="rounded-2xl bg-accent px-3 py-2.5 text-center text-sm font-black text-black">
+								🏆 {champion.emoji} {champion.name}
+							</div>
+						)}
+					</div>
+				</div>
+			)}
+			{showThird && (
+				<div className="mx-auto w-full max-w-[calc(50%+10px)] sm:max-w-[280px]">
+					<MatchBox
+						match={third}
+						labels={["Przegrany PF1", "Przegrany PF2"]}
+						entrantsById={entrantsById}
+						onSelect={onSelect}
+						title="Mecz o 3. miejsce 🥉"
+					/>
+				</div>
+			)}
 		</div>
 	);
 }

@@ -1,4 +1,6 @@
-export type Stage = "group" | "semi" | "third" | "final";
+export type Stage = "group" | "quarter" | "semi" | "third" | "final";
+
+export type DisciplineFormat = "groups" | "bracket2v2";
 
 export interface Player {
 	id: number;
@@ -13,6 +15,22 @@ export interface Discipline {
 	slug: string;
 	name: string;
 	icon: string;
+	format: DisciplineFormat;
+}
+
+/** 2-player team drawn for a bracket2v2 discipline */
+export interface Team {
+	id: number;
+	disciplineId: number;
+	playerA: number;
+	playerB: number;
+}
+
+/** What a match slot points at: a player, or a team in bracket disciplines. */
+export interface Entrant {
+	id: number;
+	name: string;
+	emoji: string;
 }
 
 export interface Match {
@@ -21,6 +39,7 @@ export interface Match {
 	stage: Stage;
 	groupNo: number | null;
 	round: number | null;
+	/** entrant id: player id for "groups" disciplines, team id for "bracket2v2" */
 	playerA: number;
 	playerB: number;
 	winnerId: number | null;
@@ -45,6 +64,7 @@ export type DisciplineStatus = "waiting" | "group" | "playoff" | "done";
 export interface DisciplineState extends Discipline {
 	status: DisciplineStatus;
 	groups: GroupState[];
+	teams: Team[];
 	matches: Match[];
 	/** playerId -> final placement (1-based), only when the final is decided */
 	placements: Record<number, number>;
@@ -59,7 +79,8 @@ export interface GeneralRow {
 
 export interface TournamentState {
 	players: Player[];
-	lockedSetup: boolean;
+	/** every discipline has been drawn — signups fully closed */
+	allDrawn: boolean;
 	disciplines: DisciplineState[];
 	general: GeneralRow[];
 }

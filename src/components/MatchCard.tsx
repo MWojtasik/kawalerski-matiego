@@ -1,16 +1,16 @@
 "use client";
 
-import type { Match, Player } from "@/lib/types";
+import type { Entrant, Match } from "@/lib/types";
 import PlayerName from "./PlayerName";
 
 export default function MatchCard({
 	match,
-	playersById,
+	entrantsById,
 	onClick,
 	subtitle,
 }: {
 	match: Match;
-	playersById: Map<number, Player>;
+	entrantsById: Map<number, Entrant>;
 	onClick?: () => void;
 	subtitle?: string;
 }) {
@@ -27,11 +27,11 @@ export default function MatchCard({
 			<div className="flex items-center justify-between gap-3">
 				<div className="flex min-w-0 flex-col gap-1">
 					<span className={played && !winnerA ? "text-white/50 line-through decoration-white/30" : ""}>
-						<PlayerName player={playersById.get(match.playerA)} bold={winnerA} />
+						<PlayerName player={entrantsById.get(match.playerA)} bold={winnerA} />
 						{winnerA && <span className="ml-1.5">✅</span>}
 					</span>
 					<span className={played && !winnerB ? "text-white/50 line-through decoration-white/30" : ""}>
-						<PlayerName player={playersById.get(match.playerB)} bold={winnerB} />
+						<PlayerName player={entrantsById.get(match.playerB)} bold={winnerB} />
 						{winnerB && <span className="ml-1.5">✅</span>}
 					</span>
 				</div>

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getEnv, setSetting } from "@/lib/db";
+import { getEnv } from "@/lib/db";
 
 export async function POST(request: Request) {
 	const env = await getEnv();
@@ -9,10 +9,10 @@ export async function POST(request: Request) {
 	}
 	const db = env.DB;
 	await db.prepare("DELETE FROM matches").run();
+	await db.prepare("DELETE FROM teams").run();
 	if (body.scope === "all") {
 		await db.prepare("DELETE FROM player_disciplines").run();
 		await db.prepare("DELETE FROM players").run();
 	}
-	await setSetting(db, "locked_setup", "0");
 	return NextResponse.json({ ok: true });
 }

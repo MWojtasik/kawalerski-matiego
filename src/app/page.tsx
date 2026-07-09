@@ -2,16 +2,15 @@
 
 import Link from "next/link";
 import PlayerName from "@/components/PlayerName";
-import { useMyPlayerId, useTournament } from "@/lib/useTournament";
+import { entrantsFor, useMyPlayerId, useTournament } from "@/lib/useTournament";
 import type { DisciplineState } from "@/lib/types";
 
 function statusLabel(d: DisciplineState): string {
 	if (d.status === "waiting") return "czeka na losowanie";
 	if (d.status === "done") return "zakończony 🏁";
+	if (d.status === "playoff") return d.format === "bracket2v2" ? "drabinka 🔥" : "playoff 🔥";
 	const played = d.matches.filter((m) => m.winnerId !== null).length;
-	return d.status === "group"
-		? `grupy · ${played}/${d.matches.length} meczów`
-		: "playoff 🔥";
+	return `grupy · ${played}/${d.matches.length} meczów`;
 }
 
 export default function Home() {
@@ -28,7 +27,7 @@ export default function Home() {
 			d.matches
 				.filter((m) => m.winnerId === null)
 				.slice(0, 2)
-				.map((m) => ({ discipline: d, match: m })),
+				.map((m) => ({ discipline: d, match: m, entrants: entrantsFor(d, playersById) })),
 		)
 		.slice(0, 6);
 	const top3 = state.general.filter((row) => row.points > 0).slice(0, 3);
@@ -37,16 +36,18 @@ export default function Home() {
 		<main className="flex flex-col gap-8">
 			<header className="text-center">
 				<h1 className="text-3xl font-black tracking-tight">🍻 Kawalerski Matiego</h1>
-				<p className="mt-1 text-sm text-white/50">bilard · dart · ping-pong</p>
+				<p className="mt-1 text-sm text-white/50">
+					{state.disciplines.map((d) => d.name.toLowerCase()).join(" · ")}
+				</p>
 			</header>
 
-			{!state.lockedSetup &&
+			{!state.allDrawn &&
 				(myPlayer ? (
 					<Link
 						href="/setup"
 						className="rounded-3xl border border-accent/30 bg-accent/10 px-6 py-4 text-center font-semibold active:scale-[0.98]"
 					>
-						✅ Grasz jako {myPlayer.emoji} {myPlayer.name} — czekamy na losowanie
+						✅ Grasz jako {myPlayer.emoji} {myPlayer.name} — zapisy wciąż otwarte
 					</Link>
 				) : (
 					<Link
@@ -91,10 +92,9 @@ export default function Home() {
 				</h2>
 				<div className="flex flex-col gap-2">
 					{state.disciplines.map((d) => {
+						const final = d.matches.find((m) => m.stage === "final");
 						const champion =
-							d.status === "done"
-								? Object.entries(d.placements).find(([, place]) => place === 1)?.[0]
-								: undefined;
+							final?.winnerId != null ? entrantsFor(d, playersById).get(final.winnerId) : undefined;
 						return (
 							<Link
 								key={d.slug}
@@ -110,7 +110,7 @@ export default function Home() {
 								</span>
 								{champion ? (
 									<span className="text-sm">
-										🏆 <PlayerName player={playersById.get(Number(champion))} bold />
+										🏆 <PlayerName player={champion} bold />
 									</span>
 								) : (
 									<span className="text-white/30">→</span>
@@ -127,16 +127,16 @@ export default function Home() {
 						Do rozegrania
 					</h2>
 					<div className="flex flex-col gap-2">
-						{pending.map(({ discipline, match }) => (
+						{pending.map(({ discipline, match, entrants }) => (
 							<Link
 								key={match.id}
 								href={`/d/${discipline.slug}`}
 								className="flex items-center justify-between rounded-2xl bg-white/5 px-4 py-3 text-sm active:bg-white/10"
 							>
 								<span>
-									<PlayerName player={playersById.get(match.playerA)} />
+									<PlayerName player={entrants.get(match.playerA)} />
 									<span className="mx-2 text-white/40">vs</span>
-									<PlayerName player={playersById.get(match.playerB)} />
+									<PlayerName player={entrants.get(match.playerB)} />
 								</span>
 								<span className="text-lg">{discipline.icon}</span>
 							</Link>
@@ -145,7 +145,7 @@ export default function Home() {
 				</section>
 			)}
 
-			{state.lockedSetup && (
+			{state.allDrawn && (
 				<Link href="/setup" className="text-center text-xs text-white/30">
 					ustawienia turnieju
 				</Link>
