@@ -23,6 +23,7 @@ export default function Home() {
 	const [error, setError] = useState<string | null>(null);
 	const [joining, setJoining] = useState(false);
 	const [resetOpen, setResetOpen] = useState(false);
+	const [qrOpen, setQrOpen] = useState(false);
 	const [pin, setPin] = useState("");
 
 	if (isLoading || !state) {
@@ -124,12 +125,6 @@ export default function Home() {
 					<span>🏁 Turniej zakończony — zobacz podsumowanie</span>
 					<span>→</span>
 				</Link>
-			)}
-
-			{!state.allDrawn && (
-				<section className="flex flex-col items-center gap-3 rounded-3xl bg-white/5 p-4">
-					<JoinQr />
-				</section>
 			)}
 
 			{!state.allDrawn && !myPlayer && (
@@ -357,6 +352,40 @@ export default function Home() {
 					})}
 				</div>
 			</section>
+
+			<section className="flex justify-center">
+				<button
+					type="button"
+					onClick={() => setQrOpen(true)}
+					className="rounded-2xl bg-white/5 px-5 py-3 text-sm font-semibold text-white/70 active:bg-white/10"
+				>
+					📱 Pokaż kod QR do dołączenia
+				</button>
+			</section>
+
+			{qrOpen && (
+				<div
+					onClick={() => setQrOpen(false)}
+					className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-6"
+					role="dialog"
+					aria-modal="true"
+					aria-label="Kod QR do dołączenia"
+				>
+					<div
+						onClick={(e) => e.stopPropagation()}
+						className="flex flex-col items-center gap-4 rounded-3xl bg-neutral-900 p-6"
+					>
+						<JoinQr size={240} />
+						<button
+							type="button"
+							onClick={() => setQrOpen(false)}
+							className="rounded-2xl bg-white/10 px-5 py-2.5 text-sm font-semibold text-white/70 active:bg-white/20"
+						>
+							Zamknij
+						</button>
+					</div>
+				</div>
+			)}
 
 			<section className="border-t border-white/10 pt-4">
 				{!resetOpen ? (
