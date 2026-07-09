@@ -1,7 +1,12 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-	/* config options here */
+	// Pin the workspace root to this project. Git worktrees nest under the main
+	// repo, so Next would otherwise pick the parent repo's lockfile as the root
+	// and fail to resolve the app during build.
+	turbopack: {
+		root: __dirname,
+	},
 };
 
 export default nextConfig;
