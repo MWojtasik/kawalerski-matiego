@@ -15,7 +15,7 @@ export async function getDb(): Promise<D1Database> {
 	return (await getEnv()).DB;
 }
 
-interface MatchRow {
+export interface MatchRow {
 	id: number;
 	discipline_id: number;
 	stage: Stage;
@@ -23,12 +23,10 @@ interface MatchRow {
 	round: number | null;
 	player_a: number;
 	player_b: number;
-	score_a: number | null;
-	score_b: number | null;
 	winner_id: number | null;
 }
 
-function toMatch(row: MatchRow): Match {
+export function toMatch(row: MatchRow): Match {
 	return {
 		id: row.id,
 		disciplineId: row.discipline_id,
@@ -37,15 +35,23 @@ function toMatch(row: MatchRow): Match {
 		round: row.round,
 		playerA: row.player_a,
 		playerB: row.player_b,
-		scoreA: row.score_a,
-		scoreB: row.score_b,
 		winnerId: row.winner_id,
 	};
 }
 
 export async function loadPlayers(db: D1Database): Promise<Player[]> {
-	const { results } = await db.prepare("SELECT * FROM players ORDER BY id").all<Player>();
-	return results;
+	const [{ results: players }, { results: signups }] = await Promise.all([
+		db.prepare("SELECT id, name, emoji FROM players ORDER BY id").all<Omit<Player, "disciplineIds">>(),
+		db
+			.prepare("SELECT player_id, discipline_id FROM player_disciplines")
+			.all<{ player_id: number; discipline_id: number }>(),
+	]);
+	const byPlayer = new Map<number, number[]>();
+	for (const s of signups) {
+		if (!byPlayer.has(s.player_id)) byPlayer.set(s.player_id, []);
+		byPlayer.get(s.player_id)!.push(s.discipline_id);
+	}
+	return players.map((p) => ({ ...p, disciplineIds: byPlayer.get(p.id) ?? [] }));
 }
 
 export async function loadDisciplines(db: D1Database): Promise<Discipline[]> {
@@ -77,7 +83,7 @@ export async function setSetting(db: D1Database, key: string, value: string): Pr
 
 export async function insertMatch(
 	db: D1Database,
-	m: Omit<Match, "id" | "scoreA" | "scoreB" | "winnerId">,
+	m: Omit<Match, "id" | "winnerId">,
 ): Promise<void> {
 	await db
 		.prepare(

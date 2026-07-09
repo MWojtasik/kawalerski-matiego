@@ -4,6 +4,8 @@ export interface Player {
 	id: number;
 	name: string;
 	emoji: string;
+	/** disciplines the player signed up for */
+	disciplineIds: number[];
 }
 
 export interface Discipline {
@@ -21,8 +23,6 @@ export interface Match {
 	round: number | null;
 	playerA: number;
 	playerB: number;
-	scoreA: number | null;
-	scoreB: number | null;
 	winnerId: number | null;
 }
 
@@ -31,9 +31,6 @@ export interface StandingRow {
 	played: number;
 	wins: number;
 	losses: number;
-	scoreFor: number;
-	scoreAgainst: number;
-	diff: number;
 }
 
 export interface GroupState {
@@ -49,7 +46,7 @@ export interface DisciplineState extends Discipline {
 	status: DisciplineStatus;
 	groups: GroupState[];
 	matches: Match[];
-	/** playerId -> final placement (1-based), only when playoff produced results */
+	/** playerId -> final placement (1-based), only when the final is decided */
 	placements: Record<number, number>;
 }
 

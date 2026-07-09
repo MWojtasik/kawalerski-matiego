@@ -26,21 +26,18 @@ export default function MatchCard({
 			{subtitle && <div className="mb-1 text-[11px] uppercase tracking-wide text-white/40">{subtitle}</div>}
 			<div className="flex items-center justify-between gap-3">
 				<div className="flex min-w-0 flex-col gap-1">
-					<span className={winnerA ? "" : played ? "text-white/50" : ""}>
+					<span className={played && !winnerA ? "text-white/50 line-through decoration-white/30" : ""}>
 						<PlayerName player={playersById.get(match.playerA)} bold={winnerA} />
+						{winnerA && <span className="ml-1.5">✅</span>}
 					</span>
-					<span className={winnerB ? "" : played ? "text-white/50" : ""}>
+					<span className={played && !winnerB ? "text-white/50 line-through decoration-white/30" : ""}>
 						<PlayerName player={playersById.get(match.playerB)} bold={winnerB} />
+						{winnerB && <span className="ml-1.5">✅</span>}
 					</span>
 				</div>
-				{played ? (
-					<div className="flex flex-col items-end gap-1 font-mono text-lg font-bold tabular-nums">
-						<span className={winnerA ? "text-accent" : "text-white/50"}>{match.scoreA}</span>
-						<span className={winnerB ? "text-accent" : "text-white/50"}>{match.scoreB}</span>
-					</div>
-				) : (
+				{!played && (
 					<span className="rounded-full bg-accent/15 px-3 py-1 text-xs font-semibold text-accent">
-						wpisz wynik
+						kto wygrał?
 					</span>
 				)}
 			</div>

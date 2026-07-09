@@ -5,7 +5,7 @@ import { use, useState } from "react";
 import Bracket from "@/components/Bracket";
 import GroupTable from "@/components/GroupTable";
 import MatchCard from "@/components/MatchCard";
-import ScoreModal from "@/components/ScoreModal";
+import WinnerModal from "@/components/WinnerModal";
 import { useTournament } from "@/lib/useTournament";
 import type { Match } from "@/lib/types";
 
@@ -43,6 +43,10 @@ export default function DisciplinePage({ params }: { params: Promise<{ slug: str
 		discipline.matches.filter((m) => m.stage === "group" && m.groupNo === no);
 	const playoffStarted = discipline.matches.some((m) => m.stage !== "group");
 	const activeGroup = discipline.groups.find((g) => g.no === tab);
+	const groupCount = discipline.groups.length;
+	const advancingCount = groupCount === 1 ? 4 : groupCount === 2 ? 2 : 1;
+	const advancingNote =
+		groupCount === 3 ? "z drugich miejsc awansuje najlepszy (wygrane, potem mniej meczów)" : undefined;
 
 	return (
 		<main className="flex flex-col gap-5">
@@ -87,7 +91,12 @@ export default function DisciplinePage({ params }: { params: Promise<{ slug: str
 			{tab !== "playoff" && activeGroup && (
 				<>
 					<section className="rounded-2xl bg-white/5 px-4 py-3">
-						<GroupTable group={activeGroup} playersById={playersById} />
+						<GroupTable
+							group={activeGroup}
+							playersById={playersById}
+							advancingCount={advancingCount}
+							advancingNote={advancingNote}
+						/>
 					</section>
 					<section className="flex flex-col gap-2">
 						{groupMatches(activeGroup.no).map((m) => (
@@ -108,7 +117,7 @@ export default function DisciplinePage({ params }: { params: Promise<{ slug: str
 			)}
 
 			{selected && (
-				<ScoreModal
+				<WinnerModal
 					match={selected}
 					playersById={playersById}
 					onClose={() => setSelected(null)}

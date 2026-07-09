@@ -44,8 +44,8 @@ export default function Home() {
 					className="rounded-3xl bg-accent px-6 py-5 text-center text-lg font-bold text-black active:scale-[0.98]"
 				>
 					{state.players.length < 4
-						? "⚙️ Dodaj graczy i wylosuj grupy"
-						: `🎲 ${state.players.length} graczy — losuj grupy!`}
+						? "🎉 Zapisz się na turniej!"
+						: `🎉 Zapisz się! (jest już ${state.players.length} graczy)`}
 				</Link>
 			)}
 

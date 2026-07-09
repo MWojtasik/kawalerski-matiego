@@ -4,7 +4,6 @@ import {
 	disciplinePlacements,
 	disciplineStatus,
 	generalClassification,
-	stageComplete,
 } from "./tournament";
 import type { DisciplineState, GroupState, Match, TournamentState } from "./types";
 
@@ -40,12 +39,10 @@ export async function buildState(db: D1Database): Promise<TournamentState> {
 	const disciplineStates: DisciplineState[] = disciplines.map((d) => {
 		const dMatches = matches.filter((m) => m.disciplineId === d.id);
 		const groups = groupsOf(dMatches);
-		const placements = stageComplete(dMatches, "final")
-			? disciplinePlacements(
-					dMatches,
-					groups.map((g) => g.standings),
-				)
-			: {};
+		const placements = disciplinePlacements(
+			dMatches,
+			groups.map((g) => g.standings),
+		);
 		return {
 			...d,
 			status: disciplineStatus(dMatches),

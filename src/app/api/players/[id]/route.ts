@@ -10,6 +10,7 @@ export async function DELETE(
 		return NextResponse.json({ error: "Turniej już wylosowany — setup zablokowany" }, { status: 409 });
 	}
 	const { id } = await params;
+	await db.prepare("DELETE FROM player_disciplines WHERE player_id = ?").bind(Number(id)).run();
 	await db.prepare("DELETE FROM players WHERE id = ?").bind(Number(id)).run();
 	return NextResponse.json({ ok: true });
 }

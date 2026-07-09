@@ -10,6 +10,7 @@ export async function POST(request: Request) {
 	const db = env.DB;
 	await db.prepare("DELETE FROM matches").run();
 	if (body.scope === "all") {
+		await db.prepare("DELETE FROM player_disciplines").run();
 		await db.prepare("DELETE FROM players").run();
 	}
 	await setSetting(db, "locked_setup", "0");
