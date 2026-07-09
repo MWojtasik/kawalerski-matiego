@@ -1,9 +1,11 @@
 # 🍻 Kawalerski Matiego — kawalerski-matiego.pl
 
-Strona turniejowa na kawalerski: bilard 🎱, dart 🎯, ping-pong 🏓.
-Setup graczy → losowanie grup → faza grupowa (każdy z każdym) → playoff
-(półfinały, mecz o 3. miejsce, finał) → klasyfikacja generalna wyłaniająca
-**Mistrza Kawalerskiego** 👑.
+Strona turniejowa na kawalerski: bilard 🎱, dart 🎯, ping-pong 🏓,
+piłkarzyki ⚽ (2v2). Setup graczy → losowanie per dyscyplina (grupy albo,
+w piłkarzykach, losowe drużyny 2-osobowe) → faza grupowa (każdy z każdym) →
+playoff / drabinka (ćwierćfinały przy 5-8 drużynach, półfinały, mecz o 3.
+miejsce, finał) → klasyfikacja generalna wyłaniająca
+**Mistrza Kawalerskiego** 👑. W piłkarzykach punkty dostają oboje z pary.
 
 Stan jest współdzielony — każdy patrzy w drabinkę na swoim telefonie, wyniki
 wpisuje ktokolwiek. Bez logowania; PIN chroni tylko reset turnieju.

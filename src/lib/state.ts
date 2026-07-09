@@ -1,8 +1,10 @@
-import { getSetting, loadDisciplines, loadMatches, loadPlayers } from "./db";
+import { loadDisciplines, loadMatches, loadPlayers, loadTeams } from "./db";
 import {
+	bracketPlacements,
 	computeStandings,
 	disciplinePlacements,
 	disciplineStatus,
+	expandTeamPlacements,
 	generalClassification,
 } from "./tournament";
 import type { DisciplineState, GroupState, Match, TournamentState } from "./types";
@@ -29,24 +31,29 @@ export function groupsOf(matches: Match[]): GroupState[] {
 }
 
 export async function buildState(db: D1Database): Promise<TournamentState> {
-	const [players, disciplines, matches, locked] = await Promise.all([
+	const [players, disciplines, matches, teams] = await Promise.all([
 		loadPlayers(db),
 		loadDisciplines(db),
 		loadMatches(db),
-		getSetting(db, "locked_setup"),
+		loadTeams(db),
 	]);
 
 	const disciplineStates: DisciplineState[] = disciplines.map((d) => {
 		const dMatches = matches.filter((m) => m.disciplineId === d.id);
-		const groups = groupsOf(dMatches);
-		const placements = disciplinePlacements(
-			dMatches,
-			groups.map((g) => g.standings),
-		);
+		const dTeams = teams.filter((t) => t.disciplineId === d.id);
+		const groups = d.format === "bracket2v2" ? [] : groupsOf(dMatches);
+		const placements =
+			d.format === "bracket2v2"
+				? expandTeamPlacements(bracketPlacements(dMatches), dTeams)
+				: disciplinePlacements(
+						dMatches,
+						groups.map((g) => g.standings),
+					);
 		return {
 			...d,
 			status: disciplineStatus(dMatches),
 			groups,
+			teams: dTeams,
 			matches: dMatches,
 			placements,
 		};
@@ -59,7 +66,7 @@ export async function buildState(db: D1Database): Promise<TournamentState> {
 
 	return {
 		players,
-		lockedSetup: locked === "1",
+		allDrawn: disciplineStates.every((d) => d.status !== "waiting"),
 		disciplines: disciplineStates,
 		general: generalClassification(
 			players.map((p) => p.id),

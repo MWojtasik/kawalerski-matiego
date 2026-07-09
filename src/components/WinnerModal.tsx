@@ -2,16 +2,16 @@
 
 import { useState } from "react";
 import { api } from "@/lib/useTournament";
-import type { Match, Player } from "@/lib/types";
+import type { Entrant, Match } from "@/lib/types";
 
 export default function WinnerModal({
 	match,
-	playersById,
+	entrantsById,
 	onClose,
 	onSaved,
 }: {
 	match: Match;
-	playersById: Map<number, Player>;
+	entrantsById: Map<number, Entrant>;
 	onClose: () => void;
 	onSaved: () => void;
 }) {
@@ -31,7 +31,7 @@ export default function WinnerModal({
 		}
 	}
 
-	const contenders = [match.playerA, match.playerB].map((id) => playersById.get(id));
+	const contenders = [match.playerA, match.playerB].map((id) => entrantsById.get(id));
 
 	return (
 		<div
@@ -50,20 +50,20 @@ export default function WinnerModal({
 				)}
 				<div className="mt-5 flex flex-col gap-3">
 					{contenders.map(
-						(player) =>
-							player && (
+						(entrant) =>
+							entrant && (
 								<button
-									key={player.id}
+									key={entrant.id}
 									type="button"
 									disabled={saving}
-									onClick={() => pick(player.id)}
+									onClick={() => pick(entrant.id)}
 									className={`rounded-2xl px-4 py-4 text-lg font-bold active:scale-[0.98] disabled:opacity-50 ${
-										match.winnerId === player.id
+										match.winnerId === entrant.id
 											? "bg-accent text-black"
 											: "bg-white/10"
 									}`}
 								>
-									{player.emoji} {player.name}
+									{entrant.emoji} {entrant.name}
 								</button>
 							),
 					)}

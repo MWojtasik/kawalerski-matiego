@@ -8,6 +8,7 @@ const items = [
 	{ href: "/d/bilard", label: "Bilard", icon: "🎱" },
 	{ href: "/d/dart", label: "Dart", icon: "🎯" },
 	{ href: "/d/pingpong", label: "Pong", icon: "🏓" },
+	{ href: "/d/pilkarzyki", label: "Piłkarzyki", icon: "⚽" },
 	{ href: "/general", label: "Ranking", icon: "🏆" },
 ];
 
@@ -22,12 +23,12 @@ export default function Nav() {
 						<Link
 							key={item.href}
 							href={item.href}
-							className={`flex flex-1 flex-col items-center gap-0.5 py-2.5 text-xs ${
+							className={`flex min-w-0 flex-1 flex-col items-center gap-0.5 py-2.5 text-[11px] ${
 								active ? "text-accent" : "text-white/60"
 							}`}
 						>
 							<span className="text-xl">{item.icon}</span>
-							{item.label}
+							<span className="max-w-full truncate px-0.5">{item.label}</span>
 						</Link>
 					);
 				})}

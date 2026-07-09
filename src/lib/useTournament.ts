@@ -2,7 +2,7 @@
 
 import { useSyncExternalStore } from "react";
 import useSWR from "swr";
-import type { Player, TournamentState } from "./types";
+import type { DisciplineState, Entrant, Player, TournamentState } from "./types";
 
 const fetcher = (url: string) =>
 	fetch(url).then((r) => r.json() as Promise<TournamentState>);
@@ -14,6 +14,28 @@ export function useTournament() {
 	});
 	const playersById = new Map<number, Player>((data?.players ?? []).map((p) => [p.id, p]));
 	return { state: data, playersById, mutate, isLoading };
+}
+
+/** Who a match slot refers to in this discipline: players, or teams for 2v2. */
+export function entrantsFor(
+	discipline: DisciplineState,
+	playersById: Map<number, Player>,
+): Map<number, Entrant> {
+	if (discipline.format !== "bracket2v2") return playersById;
+	return new Map(
+		discipline.teams.map((team) => {
+			const a = playersById.get(team.playerA);
+			const b = playersById.get(team.playerB);
+			return [
+				team.id,
+				{
+					id: team.id,
+					emoji: `${a?.emoji ?? "?"}${b?.emoji ?? ""}`,
+					name: `${a?.name ?? "?"} + ${b?.name ?? "?"}`,
+				},
+			];
+		}),
+	);
 }
 
 const MY_PLAYER_KEY = "kawalerski_my_player_id";

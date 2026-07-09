@@ -1,12 +1,19 @@
 import { describe, expect, it } from "vitest";
 import {
+	bracketDrawPreview,
+	bracketPlacements,
 	computeStandings,
 	disciplinePlacements,
 	disciplineStatus,
+	expandTeamPlacements,
 	generalClassification,
+	groupDrawPreview,
+	nextBracketMatches,
 	numGroupsFor,
+	pairTeams,
 	pointsForPlace,
 	roundRobinRounds,
+	seedBracket,
 	seedPlayoff,
 	shuffle,
 	splitIntoGroups,
@@ -290,6 +297,180 @@ describe("disciplineStatus", () => {
 		expect(disciplineStatus([match({ stage: "final", groupNo: null, winner: 1, loser: 2 })])).toBe(
 			"done",
 		);
+	});
+
+	it("a bracket-only discipline is in playoff from the first pending match", () => {
+		expect(disciplineStatus([bpending("quarter", 1, 2)])).toBe("playoff");
+	});
+});
+
+/** decided bracket match (groupNo null) */
+function bmatch(stage: Stage, winner: number, loser: number): Match {
+	return match({ stage, groupNo: null, winner, loser });
+}
+
+/** pending bracket match */
+function bpending(stage: Stage, a: number, b: number): Match {
+	return { ...pending(a, b), stage, groupNo: null };
+}
+
+describe("groupDrawPreview", () => {
+	it("11 players at ~4 -> 4/4/3, 15 group matches + 4 playoff", () => {
+		expect(groupDrawPreview(11, 4)).toEqual({
+			groupSizes: [4, 4, 3],
+			groupMatches: 15,
+			playoffMatches: 4,
+			total: 19,
+		});
+	});
+
+	it("4 players -> single group of 4, 6 + 4 matches", () => {
+		expect(groupDrawPreview(4, 4)).toEqual({
+			groupSizes: [4],
+			groupMatches: 6,
+			playoffMatches: 4,
+			total: 10,
+		});
+	});
+});
+
+describe("bracketDrawPreview", () => {
+	it("computes teams, sit-out and match count", () => {
+		expect(bracketDrawPreview(4)).toEqual({ teams: 2, sitOut: false, matches: 1 });
+		expect(bracketDrawPreview(6)).toEqual({ teams: 3, sitOut: false, matches: 2 });
+		expect(bracketDrawPreview(7)).toEqual({ teams: 3, sitOut: true, matches: 2 });
+		expect(bracketDrawPreview(8)).toEqual({ teams: 4, sitOut: false, matches: 4 });
+		expect(bracketDrawPreview(9)).toEqual({ teams: 4, sitOut: true, matches: 4 });
+		expect(bracketDrawPreview(16)).toEqual({ teams: 8, sitOut: false, matches: 8 });
+	});
+});
+
+describe("pairTeams", () => {
+	it("even count: everyone plays exactly once, nobody sits out", () => {
+		const { pairs, sitOutId } = pairTeams([1, 2, 3, 4, 5, 6]);
+		expect(sitOutId).toBeNull();
+		expect([...pairs.flat()].sort()).toEqual([1, 2, 3, 4, 5, 6]);
+	});
+
+	it("odd count: exactly one player sits out", () => {
+		const { pairs, sitOutId } = pairTeams([1, 2, 3, 4, 5]);
+		expect(sitOutId).not.toBeNull();
+		expect(pairs).toHaveLength(2);
+		expect(new Set([...pairs.flat(), sitOutId!]).size).toBe(5);
+	});
+
+	it("is deterministic with an injected rand", () => {
+		const rand = () => 0;
+		expect(pairTeams([1, 2, 3, 4, 5], rand)).toEqual(pairTeams([1, 2, 3, 4, 5], rand));
+	});
+});
+
+describe("seedBracket", () => {
+	it("2 teams: straight final", () => {
+		expect(seedBracket([1, 2])).toEqual({ stage: "final", pairs: [[1, 2]], byeTeamIds: [] });
+	});
+
+	it("3 teams: one semi, first team byes towards the final", () => {
+		expect(seedBracket([1, 2, 3])).toEqual({ stage: "semi", pairs: [[2, 3]], byeTeamIds: [1] });
+	});
+
+	it("4 teams: two semis, no byes", () => {
+		expect(seedBracket([1, 2, 3, 4])).toEqual({
+			stage: "semi",
+			pairs: [
+				[1, 2],
+				[3, 4],
+			],
+			byeTeamIds: [],
+		});
+	});
+
+	it("5-8 teams: quarters + byes, everyone placed exactly once", () => {
+		for (let t = 5; t <= 8; t++) {
+			const ids = [...Array(t).keys()].map((i) => i + 1);
+			const { stage, pairs, byeTeamIds } = seedBracket(ids);
+			expect(stage).toBe("quarter");
+			expect(pairs).toHaveLength(t - 4);
+			expect(byeTeamIds).toHaveLength(8 - t);
+			const placed = [...pairs.flat(), ...byeTeamIds];
+			expect(new Set(placed).size).toBe(t);
+		}
+	});
+});
+
+describe("nextBracketMatches", () => {
+	const teamIds = [1, 2, 3, 4, 5, 6];
+
+	it("quarters complete -> semis from byes + winners, each team once", () => {
+		// 6 teams: byes 1,2; quarters (3,4) and (5,6)
+		const matches = [bmatch("quarter", 3, 4), bmatch("quarter", 5, 6)];
+		const next = nextBracketMatches(matches, teamIds);
+		expect(next.map((m) => m.stage)).toEqual(["semi", "semi"]);
+		const ids = next.flatMap((m) => [m.playerA, m.playerB]);
+		expect([...ids].sort()).toEqual([1, 2, 3, 5]);
+	});
+
+	it("quarters partially decided -> nothing", () => {
+		expect(
+			nextBracketMatches([bmatch("quarter", 3, 4), bpending("quarter", 5, 6)], teamIds),
+		).toEqual([]);
+	});
+
+	it("single semi decided (3 teams) -> final against the double-bye team, no third", () => {
+		const next = nextBracketMatches([bmatch("semi", 2, 3)], [1, 2, 3]);
+		expect(next).toEqual([{ stage: "final", playerA: 1, playerB: 2 }]);
+	});
+
+	it("both semis decided -> third from losers + final from winners", () => {
+		const next = nextBracketMatches([bmatch("semi", 1, 2), bmatch("semi", 3, 4)], [1, 2, 3, 4]);
+		expect(next).toEqual([
+			{ stage: "third", playerA: 2, playerB: 4 },
+			{ stage: "final", playerA: 1, playerB: 3 },
+		]);
+	});
+
+	it("final already exists -> nothing", () => {
+		const matches = [bmatch("semi", 1, 2), bmatch("semi", 3, 4), bpending("final", 1, 3)];
+		expect(nextBracketMatches(matches, [1, 2, 3, 4])).toEqual([]);
+	});
+});
+
+describe("bracketPlacements", () => {
+	it("full 8-team run: 1-4 from playoff, quarter losers share 5th", () => {
+		const matches = [
+			bmatch("quarter", 1, 2),
+			bmatch("quarter", 3, 4),
+			bmatch("quarter", 5, 6),
+			bmatch("quarter", 7, 8),
+			bmatch("semi", 1, 3),
+			bmatch("semi", 5, 7),
+			bmatch("third", 3, 7),
+			bmatch("final", 1, 5),
+		];
+		expect(bracketPlacements(matches)).toEqual({ 1: 1, 5: 2, 3: 3, 7: 4, 2: 5, 4: 5, 6: 5, 8: 5 });
+	});
+
+	it("3 teams: the lone semi's loser takes 3rd", () => {
+		const matches = [bmatch("semi", 2, 3), bmatch("final", 1, 2)];
+		expect(bracketPlacements(matches)).toEqual({ 1: 1, 2: 2, 3: 3 });
+	});
+
+	it("2 teams: just the final", () => {
+		expect(bracketPlacements([bmatch("final", 1, 2)])).toEqual({ 1: 1, 2: 2 });
+	});
+
+	it("empty until the final is decided", () => {
+		expect(bracketPlacements([bmatch("semi", 1, 2), bpending("final", 1, 3)])).toEqual({});
+	});
+});
+
+describe("expandTeamPlacements", () => {
+	it("both members inherit the team's place", () => {
+		const teams = [
+			{ id: 10, disciplineId: 4, playerA: 1, playerB: 2 },
+			{ id: 11, disciplineId: 4, playerA: 3, playerB: 4 },
+		];
+		expect(expandTeamPlacements({ 10: 1, 11: 5 }, teams)).toEqual({ 1: 1, 2: 1, 3: 5, 4: 5 });
 	});
 });
 

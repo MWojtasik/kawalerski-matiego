@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { getDb, insertMatch, toMatch, type MatchRow } from "@/lib/db";
 import { groupsOf } from "@/lib/state";
-import { seedPlayoff, stageComplete } from "@/lib/tournament";
-import type { Match } from "@/lib/types";
+import { nextBracketMatches, seedPlayoff, stageComplete } from "@/lib/tournament";
+import type { DisciplineFormat, Match } from "@/lib/types";
 
 async function disciplineMatches(db: D1Database, disciplineId: number): Promise<Match[]> {
 	const { results } = await db
@@ -39,6 +39,12 @@ export async function POST(
 			{ status: 409 },
 		);
 	}
+	if (match.stage === "quarter" && all.some((m) => m.stage === "semi")) {
+		return NextResponse.json(
+			{ error: "Półfinały już utworzone — wynik ćwierćfinału zamrożony" },
+			{ status: 409 },
+		);
+	}
 	if (match.stage === "semi" && all.some((m) => m.stage === "final")) {
 		return NextResponse.json(
 			{ error: "Finał już utworzony — wynik półfinału zamrożony" },
@@ -50,7 +56,27 @@ export async function POST(
 
 	// Auto-advance stages once the current one is complete.
 	const updated = await disciplineMatches(db, match.discipline_id);
-	if (stageComplete(updated, "group") && !updated.some((m) => m.stage === "semi")) {
+	const discipline = await db
+		.prepare("SELECT format FROM disciplines WHERE id = ?")
+		.bind(match.discipline_id)
+		.first<{ format: DisciplineFormat }>();
+
+	if (discipline?.format === "bracket2v2") {
+		const { results: teamRows } = await db
+			.prepare("SELECT id FROM teams WHERE discipline_id = ? ORDER BY id")
+			.bind(match.discipline_id)
+			.all<{ id: number }>();
+		for (const next of nextBracketMatches(updated, teamRows.map((t) => t.id))) {
+			await insertMatch(db, {
+				disciplineId: match.discipline_id,
+				stage: next.stage,
+				groupNo: null,
+				round: null,
+				playerA: next.playerA,
+				playerB: next.playerB,
+			});
+		}
+	} else if (stageComplete(updated, "group") && !updated.some((m) => m.stage === "semi")) {
 		const semis = seedPlayoff(groupsOf(updated));
 		if (semis) {
 			for (const [a, b] of semis) {

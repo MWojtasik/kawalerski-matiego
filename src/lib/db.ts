@@ -1,5 +1,5 @@
 import { getCloudflareContext } from "@opennextjs/cloudflare";
-import type { Discipline, Match, Player, Stage } from "./types";
+import type { Discipline, Match, Player, Stage, Team } from "./types";
 
 interface Env {
 	DB: D1Database;
@@ -64,21 +64,42 @@ export async function loadMatches(db: D1Database): Promise<Match[]> {
 	return results.map(toMatch);
 }
 
-export async function getSetting(db: D1Database, key: string): Promise<string | null> {
-	const row = await db
-		.prepare("SELECT value FROM settings WHERE key = ?")
-		.bind(key)
-		.first<{ value: string }>();
-	return row?.value ?? null;
+interface TeamRow {
+	id: number;
+	discipline_id: number;
+	player_a: number;
+	player_b: number;
 }
 
-export async function setSetting(db: D1Database, key: string, value: string): Promise<void> {
-	await db
-		.prepare(
-			"INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
-		)
-		.bind(key, value)
-		.run();
+export async function loadTeams(db: D1Database): Promise<Team[]> {
+	const { results } = await db.prepare("SELECT * FROM teams ORDER BY id").all<TeamRow>();
+	return results.map((row) => ({
+		id: row.id,
+		disciplineId: row.discipline_id,
+		playerA: row.player_a,
+		playerB: row.player_b,
+	}));
+}
+
+export async function insertTeam(
+	db: D1Database,
+	disciplineId: number,
+	playerA: number,
+	playerB: number,
+): Promise<number> {
+	const row = await db
+		.prepare("INSERT INTO teams (discipline_id, player_a, player_b) VALUES (?, ?, ?) RETURNING id")
+		.bind(disciplineId, playerA, playerB)
+		.first<{ id: number }>();
+	return row!.id;
+}
+
+/** Disciplines whose draw already happened (they have matches). */
+export async function drawnDisciplineIds(db: D1Database): Promise<Set<number>> {
+	const { results } = await db
+		.prepare("SELECT DISTINCT discipline_id FROM matches")
+		.all<{ discipline_id: number }>();
+	return new Set(results.map((r) => r.discipline_id));
 }
 
 export async function insertMatch(

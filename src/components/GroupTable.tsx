@@ -1,14 +1,14 @@
-import type { GroupState, Player } from "@/lib/types";
+import type { Entrant, GroupState } from "@/lib/types";
 import PlayerName from "./PlayerName";
 
 export default function GroupTable({
 	group,
-	playersById,
+	entrantsById,
 	advancingCount,
 	advancingNote,
 }: {
 	group: GroupState;
-	playersById: Map<number, Player>;
+	entrantsById: Map<number, Entrant>;
 	/** how many top spots surely advance (▲ marker) */
 	advancingCount: number;
 	/** extra note under the table, e.g. best-runner-up rule */
@@ -34,7 +34,7 @@ export default function GroupTable({
 						>
 							<td className="py-2 pr-2 text-white/40">{index + 1}</td>
 							<td className="py-2">
-								<PlayerName player={playersById.get(row.playerId)} bold={index < advancingCount} />
+								<PlayerName player={entrantsById.get(row.playerId)} bold={index < advancingCount} />
 								{index < advancingCount && <span className="ml-1.5 text-xs text-accent">▲</span>}
 							</td>
 							<td className="py-2 text-center tabular-nums">{row.played}</td>
