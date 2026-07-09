@@ -6,12 +6,13 @@ import {
 	disciplinePlacements,
 	disciplineStatus,
 	expandTeamPlacements,
+	expandTeamWins,
 	generalClassification,
 	groupDrawPreview,
+	matchWins,
 	nextBracketMatches,
 	numGroupsFor,
 	pairTeams,
-	pointsForPlace,
 	roundRobinRounds,
 	seedBracket,
 	seedPlayoff,
@@ -474,32 +475,54 @@ describe("expandTeamPlacements", () => {
 	});
 });
 
+describe("matchWins", () => {
+	it("counts decided matches per winner across stages, ignoring pending", () => {
+		const matches = [
+			match({ winner: 1, loser: 2 }),
+			match({ winner: 1, loser: 3 }),
+			match({ stage: "final", groupNo: null, winner: 1, loser: 4 }),
+			match({ winner: 2, loser: 3 }),
+			pending(1, 4),
+		];
+		expect(matchWins(matches)).toEqual({ 1: 3, 2: 1 });
+	});
+});
+
+describe("expandTeamWins", () => {
+	it("both members inherit the team's win count", () => {
+		const teams = [
+			{ id: 10, disciplineId: 4, playerA: 1, playerB: 2 },
+			{ id: 11, disciplineId: 4, playerA: 3, playerB: 4 },
+		];
+		expect(expandTeamWins({ 10: 2, 11: 1 }, teams)).toEqual({ 1: 2, 2: 2, 3: 1, 4: 1 });
+	});
+});
+
 describe("generalClassification", () => {
-	it("awards 10/7/5/4/2/1 and sums across disciplines", () => {
-		expect(pointsForPlace(1)).toBe(10);
-		expect(pointsForPlace(5)).toBe(2);
-		expect(pointsForPlace(7)).toBe(1);
+	it("gives one point per match won and sums across disciplines", () => {
 		const rows = generalClassification([1, 2, 3], {
-			bilard: { 1: 1, 2: 2, 3: 3 },
-			dart: { 1: 2, 2: 1, 3: 3 },
+			bilard: { 1: 3, 2: 2, 3: 0 },
+			dart: { 1: 1, 2: 2 },
 		});
-		expect(rows[0].points).toBe(17);
-		expect(rows[1].points).toBe(17);
-		expect(rows[2].points).toBe(10);
-		expect(rows[2].breakdown).toEqual({ bilard: 5, dart: 5 });
+		expect(rows[0].playerId).toBe(1);
+		expect(rows[0].points).toBe(4);
+		expect(rows[0].breakdown).toEqual({ bilard: 3, dart: 1 });
+		expect(rows.find((r) => r.playerId === 2)?.points).toBe(4);
+		expect(rows.find((r) => r.playerId === 3)?.points).toBe(0);
 	});
 
-	it("skips disciplines a player did not enter", () => {
-		const rows = generalClassification([1, 2], { bilard: { 1: 1 } });
+	it("omits a discipline from the breakdown when the player has no wins there", () => {
+		const rows = generalClassification([1, 2], { bilard: { 1: 2 } });
+		expect(rows.find((r) => r.playerId === 1)?.breakdown).toEqual({ bilard: 2 });
 		expect(rows.find((r) => r.playerId === 2)?.points).toBe(0);
 	});
 
-	it("breaks point ties by number of discipline wins", () => {
-		const rows = generalClassification([1, 2], {
-			bilard: { 1: 1, 2: 2 },
-			dart: { 1: 4, 2: 3 },
-			pingpong: { 1: 3, 2: 4 },
-		});
+	it("breaks point ties by number of disciplines won", () => {
+		const rows = generalClassification(
+			[1, 2],
+			{ bilard: { 1: 2, 2: 2 }, dart: { 1: 1, 2: 1 } },
+			{ bilard: { 1: 1, 2: 2 } },
+		);
 		expect(rows[0].playerId).toBe(1);
 	});
 });

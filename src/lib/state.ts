@@ -5,7 +5,9 @@ import {
 	disciplinePlacements,
 	disciplineStatus,
 	expandTeamPlacements,
+	expandTeamWins,
 	generalClassification,
+	matchWins,
 } from "./tournament";
 import type { DisciplineState, GroupState, Match, TournamentState } from "./types";
 
@@ -59,8 +61,13 @@ export async function buildState(db: D1Database): Promise<TournamentState> {
 		};
 	});
 
+	const winsBySlug: Record<string, Record<number, number>> = {};
 	const placementsBySlug: Record<string, Record<number, number>> = {};
 	for (const d of disciplineStates) {
+		const entrantWins = matchWins(d.matches);
+		const playerWins =
+			d.format === "bracket2v2" ? expandTeamWins(entrantWins, d.teams) : entrantWins;
+		if (Object.keys(playerWins).length > 0) winsBySlug[d.slug] = playerWins;
 		if (Object.keys(d.placements).length > 0) placementsBySlug[d.slug] = d.placements;
 	}
 
@@ -70,6 +77,7 @@ export async function buildState(db: D1Database): Promise<TournamentState> {
 		disciplines: disciplineStates,
 		general: generalClassification(
 			players.map((p) => p.id),
+			winsBySlug,
 			placementsBySlug,
 		),
 	};
