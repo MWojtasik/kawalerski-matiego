@@ -36,8 +36,7 @@
 		{
 			"binding": "DB",
 			"database_name": "kawalerski",
-			// Placeholder — replace with the real id from `wrangler d1 create kawalerski` before deploy.
-			"database_id": "00000000-0000-0000-0000-000000000000",
+			"database_id": "5b7fcb0b-5b2f-493b-ac01-274394b4cf0a",
 			"migrations_dir": "migrations"
 		}
 	],
