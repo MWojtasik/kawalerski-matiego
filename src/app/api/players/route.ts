@@ -31,5 +31,5 @@ export async function POST(request: Request) {
 			.bind(inserted!.id, disciplineId)
 			.run();
 	}
-	return NextResponse.json({ ok: true });
+	return NextResponse.json({ ok: true, id: inserted!.id });
 }

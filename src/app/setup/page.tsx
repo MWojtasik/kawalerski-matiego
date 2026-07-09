@@ -2,13 +2,14 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { api, useTournament } from "@/lib/useTournament";
+import { api, useMyPlayerId, useTournament } from "@/lib/useTournament";
 
 const EMOJI_POOL = ["🍺", "😎", "🦁", "🐗", "🦈", "🤠", "🥷", "🧨", "🍕", "🦍", "🐺", "🔥", "⚡", "🎸", "🚀", "🃏"];
 
 export default function SetupPage() {
 	const router = useRouter();
 	const { state, mutate, isLoading } = useTournament();
+	const { myPlayerId, setMyPlayerId } = useMyPlayerId();
 	const [name, setName] = useState("");
 	const [emoji, setEmoji] = useState<string | null>(null);
 	const [selectedDisciplines, setSelectedDisciplines] = useState<number[] | null>(null);
@@ -26,6 +27,7 @@ export default function SetupPage() {
 	const chosenDisciplines = selectedDisciplines ?? allDisciplineIds;
 	const chosenEmoji = emoji ?? EMOJI_POOL[state.players.length % EMOJI_POOL.length];
 	const disciplineIcon = (id: number) => state.disciplines.find((d) => d.id === id)?.icon;
+	const myPlayer = state.players.find((p) => p.id === myPlayerId);
 
 	async function run(action: () => Promise<void>) {
 		setError(null);
@@ -42,9 +44,14 @@ export default function SetupPage() {
 		const trimmed = name.trim();
 		if (!trimmed) return;
 		try {
-			await run(() =>
-				api("/api/players", { name: trimmed, emoji: chosenEmoji, disciplineIds: chosenDisciplines }),
-			);
+			await run(async () => {
+				const created = await api<{ id: number }>("/api/players", {
+					name: trimmed,
+					emoji: chosenEmoji,
+					disciplineIds: chosenDisciplines,
+				});
+				setMyPlayerId(created.id);
+			});
 		} catch {
 			return;
 		}
@@ -89,16 +96,36 @@ export default function SetupPage() {
 		<main className="flex flex-col gap-6">
 			<header>
 				<h1 className="text-2xl font-black">
-					{state.lockedSetup ? "⚙️ Turniej trwa" : "🎉 Dołącz do turnieju"}
+					{state.lockedSetup ? "⚙️ Turniej trwa" : myPlayer ? "✅ Jesteś w grze" : "🎉 Dołącz do turnieju"}
 				</h1>
 				<p className="mt-1 text-sm text-white/50">
 					{state.lockedSetup
 						? "Grupy wylosowane — zapisy zamknięte."
-						: "Wpisz ksywę, wybierz avatar i zaznacz, w co grasz."}
+						: myPlayer
+							? "Czekamy na resztę ekipy i losowanie."
+							: "Wpisz ksywę, wybierz avatar i zaznacz, w co grasz."}
 				</p>
 			</header>
 
-			{!state.lockedSetup && (
+			{myPlayer && (
+				<section className="flex items-center justify-between rounded-3xl border border-accent/30 bg-accent/10 px-4 py-4">
+					<span className="text-lg font-bold">
+						{myPlayer.emoji} Grasz jako {myPlayer.name}{" "}
+						<span className="text-sm font-normal opacity-70">
+							{myPlayer.disciplineIds.map(disciplineIcon).join(" ")}
+						</span>
+					</span>
+					<button
+						type="button"
+						onClick={() => setMyPlayerId(null)}
+						className="shrink-0 text-xs text-white/40 underline"
+					>
+						to nie ja
+					</button>
+				</section>
+			)}
+
+			{!state.lockedSetup && !myPlayer && (
 				<section className="flex flex-col gap-4 rounded-3xl bg-white/5 p-4">
 					<input
 						value={name}
@@ -186,7 +213,10 @@ export default function SetupPage() {
 									<button
 										type="button"
 										onClick={() =>
-											run(() => api(`/api/players/${player.id}`, undefined, "DELETE")).catch(() => {})
+											run(async () => {
+												await api(`/api/players/${player.id}`, undefined, "DELETE");
+												if (player.id === myPlayerId) setMyPlayerId(null);
+											}).catch(() => {})
 										}
 										className="rounded-full px-2 text-white/30 active:text-red-400"
 										aria-label={`Usuń ${player.name}`}

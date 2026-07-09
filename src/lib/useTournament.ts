@@ -1,5 +1,6 @@
 "use client";
 
+import { useSyncExternalStore } from "react";
 import useSWR from "swr";
 import type { Player, TournamentState } from "./types";
 
@@ -15,15 +16,47 @@ export function useTournament() {
 	return { state: data, playersById, mutate, isLoading };
 }
 
-/** POST JSON; throws Error with the server's Polish message on failure. */
-export async function api(url: string, body?: unknown, method = "POST"): Promise<void> {
+const MY_PLAYER_KEY = "kawalerski_my_player_id";
+const storeListeners = new Set<() => void>();
+
+function subscribeToMyPlayer(callback: () => void) {
+	storeListeners.add(callback);
+	window.addEventListener("storage", callback);
+	return () => {
+		storeListeners.delete(callback);
+		window.removeEventListener("storage", callback);
+	};
+}
+
+/** Which player this device registered as (kept in localStorage). */
+export function useMyPlayerId() {
+	const raw = useSyncExternalStore(
+		subscribeToMyPlayer,
+		() => localStorage.getItem(MY_PLAYER_KEY),
+		() => null,
+	);
+	function setMyPlayerId(id: number | null) {
+		if (id === null) localStorage.removeItem(MY_PLAYER_KEY);
+		else localStorage.setItem(MY_PLAYER_KEY, String(id));
+		for (const listener of storeListeners) listener();
+	}
+	return { myPlayerId: raw === null ? null : Number(raw), setMyPlayerId };
+}
+
+/** Send JSON; throws Error with the server's Polish message on failure. */
+export async function api<T = { ok: boolean }>(
+	url: string,
+	body?: unknown,
+	method = "POST",
+): Promise<T> {
 	const response = await fetch(url, {
 		method,
 		headers: { "Content-Type": "application/json" },
 		body: body === undefined ? undefined : JSON.stringify(body),
 	});
+	const data = (await response.json().catch(() => ({}))) as T & { error?: string };
 	if (!response.ok) {
-		const data = (await response.json().catch(() => ({}))) as { error?: string };
 		throw new Error(data.error ?? `Błąd (${response.status})`);
 	}
+	return data;
 }

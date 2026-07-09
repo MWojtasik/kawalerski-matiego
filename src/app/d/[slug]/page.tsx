@@ -113,7 +113,12 @@ export default function DisciplinePage({ params }: { params: Promise<{ slug: str
 			)}
 
 			{tab === "playoff" && (
-				<Bracket matches={discipline.matches} playersById={playersById} onSelect={setSelected} />
+				<Bracket
+					matches={discipline.matches}
+					groups={discipline.groups}
+					playersById={playersById}
+					onSelect={setSelected}
+				/>
 			)}
 
 			{selected && (

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import PlayerName from "@/components/PlayerName";
-import { useTournament } from "@/lib/useTournament";
+import { useMyPlayerId, useTournament } from "@/lib/useTournament";
 import type { DisciplineState } from "@/lib/types";
 
 function statusLabel(d: DisciplineState): string {
@@ -16,10 +16,12 @@ function statusLabel(d: DisciplineState): string {
 
 export default function Home() {
 	const { state, playersById, isLoading } = useTournament();
+	const { myPlayerId } = useMyPlayerId();
 
 	if (isLoading || !state) {
 		return <p className="mt-20 text-center text-white/40">Ładowanie…</p>;
 	}
+	const myPlayer = state.players.find((p) => p.id === myPlayerId);
 
 	const pending = state.disciplines
 		.flatMap((d) =>
@@ -38,16 +40,24 @@ export default function Home() {
 				<p className="mt-1 text-sm text-white/50">bilard · dart · ping-pong</p>
 			</header>
 
-			{!state.lockedSetup && (
-				<Link
-					href="/setup"
-					className="rounded-3xl bg-accent px-6 py-5 text-center text-lg font-bold text-black active:scale-[0.98]"
-				>
-					{state.players.length < 4
-						? "🎉 Zapisz się na turniej!"
-						: `🎉 Zapisz się! (jest już ${state.players.length} graczy)`}
-				</Link>
-			)}
+			{!state.lockedSetup &&
+				(myPlayer ? (
+					<Link
+						href="/setup"
+						className="rounded-3xl border border-accent/30 bg-accent/10 px-6 py-4 text-center font-semibold active:scale-[0.98]"
+					>
+						✅ Grasz jako {myPlayer.emoji} {myPlayer.name} — czekamy na losowanie
+					</Link>
+				) : (
+					<Link
+						href="/setup"
+						className="rounded-3xl bg-accent px-6 py-5 text-center text-lg font-bold text-black active:scale-[0.98]"
+					>
+						{state.players.length < 4
+							? "🎉 Zapisz się na turniej!"
+							: `🎉 Zapisz się! (jest już ${state.players.length} graczy)`}
+					</Link>
+				))}
 
 			{top3.length > 0 && (
 				<section>
