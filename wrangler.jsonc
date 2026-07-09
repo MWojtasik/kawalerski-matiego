@@ -37,6 +37,10 @@
 		{
 			"pattern": "kawalerski-matiego.pl",
 			"custom_domain": true
+		},
+		{
+			"pattern": "www.kawalerski-matiego.pl",
+			"custom_domain": true
 		}
 	],
 	"d1_databases": [
