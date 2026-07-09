@@ -1,14 +1,18 @@
 import { NextResponse } from "next/server";
-import { getDb, insertMatch, loadDisciplines, loadPlayers, setSetting } from "@/lib/db";
+import { getEnv, insertMatch, loadDisciplines, loadPlayers, setSetting } from "@/lib/db";
 import { numGroupsFor, roundRobinRounds, shuffle, splitIntoGroups } from "@/lib/tournament";
 
 export async function POST(request: Request) {
-	const db = await getDb();
+	const env = await getEnv();
+	const db = env.DB;
+	const body = (await request.json().catch(() => ({}))) as { groupSize?: number; pin?: string };
+	if (env.ADMIN_PIN && body.pin !== env.ADMIN_PIN) {
+		return NextResponse.json({ error: "Zły PIN — losuje tylko organizator" }, { status: 403 });
+	}
 	const existing = await db.prepare("SELECT COUNT(*) AS n FROM matches").first<{ n: number }>();
 	if ((existing?.n ?? 0) > 0) {
 		return NextResponse.json({ error: "Losowanie już się odbyło" }, { status: 409 });
 	}
-	const body = (await request.json().catch(() => ({}))) as { groupSize?: number };
 	const groupSize = [3, 4, 5].includes(body.groupSize ?? 0) ? body.groupSize! : 4;
 
 	const players = await loadPlayers(db);

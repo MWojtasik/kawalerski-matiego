@@ -17,6 +17,7 @@ export default function SetupPage() {
 	const [error, setError] = useState<string | null>(null);
 	const [joining, setJoining] = useState(false);
 	const [drawing, setDrawing] = useState(false);
+	const [drawPin, setDrawPin] = useState("");
 	const [resetOpen, setResetOpen] = useState(false);
 	const [pin, setPin] = useState("");
 
@@ -74,7 +75,7 @@ export default function SetupPage() {
 	async function draw() {
 		setDrawing(true);
 		try {
-			await run(() => api("/api/draw", { groupSize }));
+			await run(() => api("/api/draw", { groupSize, pin: drawPin }));
 			router.push("/");
 		} catch {
 			// error already shown
@@ -112,20 +113,13 @@ export default function SetupPage() {
 			</header>
 
 			{myPlayer && (
-				<section className="flex items-center justify-between rounded-3xl border border-accent/30 bg-accent/10 px-4 py-4">
+				<section className="rounded-3xl border border-accent/30 bg-accent/10 px-4 py-4">
 					<span className="text-lg font-bold">
 						{myPlayer.emoji} Grasz jako {myPlayer.name}{" "}
 						<span className="text-sm font-normal opacity-70">
 							{myPlayer.disciplineIds.map(disciplineIcon).join(" ")}
 						</span>
 					</span>
-					<button
-						type="button"
-						onClick={() => setMyPlayerId(null)}
-						className="shrink-0 text-xs text-white/40 underline"
-					>
-						to nie ja
-					</button>
 				</section>
 			)}
 
@@ -266,10 +260,16 @@ export default function SetupPage() {
 							</p>
 						))}
 					</div>
+					<input
+						value={drawPin}
+						onChange={(e) => setDrawPin(e.target.value)}
+						placeholder="PIN organizatora"
+						className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none placeholder:text-white/30 focus:border-accent"
+					/>
 					<button
 						type="button"
 						onClick={draw}
-						disabled={drawing || state.players.length < 4}
+						disabled={drawing || state.players.length < 4 || !drawPin}
 						className="rounded-2xl bg-accent py-4 text-lg font-bold text-black disabled:opacity-40"
 					>
 						{drawing ? "Losuję… 🎲" : "🎲 Losuj grupy i zaczynamy!"}
