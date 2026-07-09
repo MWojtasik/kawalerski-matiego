@@ -119,7 +119,7 @@ export default function DisciplinePage({ params }: { params: Promise<{ slug: str
 						{eligible.length} chętnych
 						{eligible.length > 0 && (
 							<span className="text-white/40">
-								: {eligible.map((p) => `${p.emoji} ${p.name}`).join(", ")}
+								: {eligible.map((p) => p.name).join(", ")}
 							</span>
 						)}
 					</p>
@@ -218,12 +218,12 @@ export default function DisciplinePage({ params }: { params: Promise<{ slug: str
 					<div className="flex flex-col gap-1 text-sm">
 						{discipline.teams.map((t) => {
 							const entrant = entrantsById.get(t.id);
-							return <span key={t.id}>{entrant ? `${entrant.emoji} ${entrant.name}` : "???"}</span>;
+							return <span key={t.id}>{entrant ? entrant.name : "???"}</span>;
 						})}
 					</div>
 					{sittingOut.length > 0 && (
 						<p className="mt-2 text-xs text-white/40">
-							Pauzuje: {sittingOut.map((p) => `${p.emoji} ${p.name}`).join(", ")}
+							Pauzuje: {sittingOut.map((p) => p.name).join(", ")}
 						</p>
 					)}
 				</section>

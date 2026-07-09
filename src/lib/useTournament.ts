@@ -26,14 +26,7 @@ export function entrantsFor(
 		discipline.teams.map((team) => {
 			const a = playersById.get(team.playerA);
 			const b = playersById.get(team.playerB);
-			return [
-				team.id,
-				{
-					id: team.id,
-					emoji: `${a?.emoji ?? "?"}${b?.emoji ?? ""}`,
-					name: `${a?.name ?? "?"} + ${b?.name ?? "?"}`,
-				},
-			];
+			return [team.id, { id: team.id, name: `${a?.name ?? "?"} + ${b?.name ?? "?"}` }];
 		}),
 	);
 }

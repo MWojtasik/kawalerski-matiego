@@ -5,7 +5,6 @@ export type DisciplineFormat = "groups" | "bracket2v2";
 export interface Player {
 	id: number;
 	name: string;
-	emoji: string;
 	/** disciplines the player signed up for */
 	disciplineIds: number[];
 }
@@ -30,7 +29,6 @@ export interface Team {
 export interface Entrant {
 	id: number;
 	name: string;
-	emoji: string;
 }
 
 export interface Match {
