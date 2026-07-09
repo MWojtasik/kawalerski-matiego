@@ -9,10 +9,13 @@ import {
 	expandTeamWins,
 	generalClassification,
 	groupDrawPreview,
+	liveMatches,
 	matchWins,
 	nextBracketMatches,
 	numGroupsFor,
 	pairTeams,
+	recapStats,
+	recentResults,
 	roundRobinRounds,
 	seedBracket,
 	seedPlayoff,
@@ -20,7 +23,13 @@ import {
 	splitIntoGroups,
 	stageComplete,
 } from "../src/lib/tournament";
-import type { Match, Stage, StandingRow } from "../src/lib/types";
+import type {
+	DisciplineState,
+	Match,
+	Stage,
+	StandingRow,
+	TournamentState,
+} from "../src/lib/types";
 
 let nextId = 1;
 function match(partial: {
@@ -28,8 +37,10 @@ function match(partial: {
 	groupNo?: number | null;
 	winner: number;
 	loser: number;
+	decidedAt?: string | null;
 }): Match {
-	const { stage = "group", groupNo = 1, winner, loser } = partial;
+	const { stage = "group", groupNo = 1, winner, loser, decidedAt = "2026-07-09T12:00:00.000Z" } =
+		partial;
 	return {
 		id: nextId++,
 		disciplineId: 1,
@@ -39,6 +50,7 @@ function match(partial: {
 		playerA: winner,
 		playerB: loser,
 		winnerId: winner,
+		decidedAt,
 	};
 }
 
@@ -52,6 +64,7 @@ function pending(a: number, b: number, groupNo = 1): Match {
 		playerA: a,
 		playerB: b,
 		winnerId: null,
+		decidedAt: null,
 	};
 }
 
@@ -524,5 +537,150 @@ describe("generalClassification", () => {
 			{ bilard: { 1: 1, 2: 2 } },
 		);
 		expect(rows[0].playerId).toBe(1);
+	});
+});
+
+function disc(over: Partial<DisciplineState>): DisciplineState {
+	return {
+		id: 1,
+		slug: "bilard",
+		name: "Bilard",
+		icon: "🎱",
+		format: "groups",
+		status: "group",
+		groups: [],
+		teams: [],
+		matches: [],
+		placements: {},
+		...over,
+	};
+}
+
+function stateOf(disciplines: DisciplineState[]): TournamentState {
+	return { players: [], allDrawn: false, disciplines, general: [] };
+}
+
+/** decided match with an explicit timestamp */
+function stamped(winner: number, loser: number, decidedAt: string): Match {
+	return match({ winner, loser, decidedAt });
+}
+
+describe("recentResults", () => {
+	it("returns decided matches newest first, with the loser derived", () => {
+		const state = stateOf([
+			disc({
+				matches: [
+					stamped(1, 2, "2026-07-09T10:00:00.000Z"),
+					stamped(3, 4, "2026-07-09T12:00:00.000Z"),
+					pending(5, 6),
+				],
+			}),
+		]);
+		const feed = recentResults(state);
+		expect(feed).toHaveLength(2);
+		expect(feed[0].winnerId).toBe(3);
+		expect(feed[0].loserId).toBe(4);
+		expect(feed[1].winnerId).toBe(1);
+	});
+
+	it("sinks rows without a timestamp to the bottom and respects the limit", () => {
+		const state = stateOf([
+			disc({
+				matches: [
+					match({ winner: 7, loser: 8, decidedAt: null }),
+					stamped(1, 2, "2026-07-09T10:00:00.000Z"),
+					stamped(3, 4, "2026-07-09T11:00:00.000Z"),
+				],
+			}),
+		]);
+		const feed = recentResults(state, 2);
+		expect(feed).toHaveLength(2);
+		expect(feed.map((r) => r.winnerId)).toEqual([3, 1]);
+	});
+});
+
+describe("liveMatches", () => {
+	it("collects undecided matches only from running disciplines", () => {
+		const state = stateOf([
+			disc({ id: 1, status: "group", matches: [pending(1, 2), match({ winner: 1, loser: 2 })] }),
+			disc({ id: 2, slug: "dart", status: "waiting", matches: [pending(3, 4)] }),
+			disc({ id: 3, slug: "pong", status: "done", matches: [pending(5, 6)] }),
+			disc({ id: 4, slug: "foos", status: "playoff", matches: [pending(7, 8)] }),
+		]);
+		const live = liveMatches(state);
+		expect(live.map((l) => l.disciplineId).sort()).toEqual([1, 4]);
+	});
+
+	it("respects the limit", () => {
+		const state = stateOf([
+			disc({ matches: [pending(1, 2), pending(3, 4), pending(5, 6)] }),
+		]);
+		expect(liveMatches(state, 2)).toHaveLength(2);
+	});
+});
+
+describe("recapStats", () => {
+	it("summarises a finished groups discipline", () => {
+		const matches = [
+			stamped(1, 2, "2026-07-09T10:00:00.000Z"),
+			stamped(1, 3, "2026-07-09T10:05:00.000Z"),
+			stamped(2, 3, "2026-07-09T10:10:00.000Z"),
+		];
+		const state: TournamentState = {
+			players: [
+				{ id: 1, name: "A", disciplineIds: [1] },
+				{ id: 2, name: "B", disciplineIds: [1] },
+				{ id: 3, name: "C", disciplineIds: [1] },
+			],
+			allDrawn: true,
+			disciplines: [disc({ status: "done", matches, placements: { 1: 1, 2: 2, 3: 3 } })],
+			general: [
+				{ playerId: 1, points: 2, breakdown: { bilard: 2 } },
+				{ playerId: 2, points: 1, breakdown: { bilard: 1 } },
+				{ playerId: 3, points: 0, breakdown: {} },
+			],
+		};
+		const r = recapStats(state);
+		expect(r.totalPlayers).toBe(3);
+		expect(r.decidedMatches).toBe(3);
+		expect(r.championId).toBe(1);
+		expect(r.podium.map((p) => p.playerId)).toEqual([1, 2]);
+		expect(r.disciplineChampions[0].playerIds).toEqual([1]);
+		expect(r.unbeatenIds).toEqual([1]);
+		expect(r.mostActive).toEqual({ playerId: 1, played: 2 });
+		expect(r.unluckyId).toBe(3);
+	});
+
+	it("credits 2v2 team results to both members", () => {
+		const state: TournamentState = {
+			players: [4, 5, 6, 7].map((id) => ({ id, name: `P${id}`, disciplineIds: [2] })),
+			allDrawn: true,
+			disciplines: [
+				disc({
+					id: 2,
+					slug: "foos",
+					name: "Piłkarzyki",
+					icon: "⚽",
+					format: "bracket2v2",
+					status: "done",
+					teams: [
+						{ id: 10, disciplineId: 2, playerA: 4, playerB: 5 },
+						{ id: 11, disciplineId: 2, playerA: 6, playerB: 7 },
+					],
+					matches: [match({ stage: "final", groupNo: null, winner: 10, loser: 11 })],
+					placements: { 4: 1, 5: 1, 6: 2, 7: 2 },
+				}),
+			],
+			general: [
+				{ playerId: 4, points: 1, breakdown: { foos: 1 } },
+				{ playerId: 5, points: 1, breakdown: { foos: 1 } },
+				{ playerId: 6, points: 0, breakdown: {} },
+				{ playerId: 7, points: 0, breakdown: {} },
+			],
+		};
+		const r = recapStats(state);
+		expect(r.disciplineChampions[0].playerIds).toEqual([4, 5]);
+		expect(r.unbeatenIds).toEqual([4, 5]);
+		expect(r.unluckyId).toBe(6);
 	});
 });

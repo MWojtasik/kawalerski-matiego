@@ -42,11 +42,13 @@ function Slot({
 	placeholder,
 	winner,
 	loser,
+	me,
 }: {
 	player: Entrant | undefined;
 	placeholder: string;
 	winner?: boolean;
 	loser?: boolean;
+	me?: boolean;
 }) {
 	if (!player) {
 		return (
@@ -57,7 +59,7 @@ function Slot({
 	}
 	return (
 		<div
-			className={`truncate rounded-lg px-2.5 py-2 text-sm ${
+			className={`truncate rounded-lg px-2.5 py-2 text-sm ${me ? "ring-1 ring-accent" : ""} ${
 				winner
 					? "bg-accent/20 font-bold text-accent"
 					: loser
@@ -66,6 +68,7 @@ function Slot({
 			}`}
 		>
 			{player.name}
+			{me && <span className="ml-1 text-[10px] font-bold uppercase text-accent">· ty</span>}
 		</div>
 	);
 }
@@ -76,12 +79,14 @@ function MatchBox({
 	entrantsById,
 	onSelect,
 	title,
+	meIds,
 }: {
 	match: Match | undefined;
 	labels: [string, string];
 	entrantsById: Map<number, Entrant>;
 	onSelect: (match: Match) => void;
 	title: string;
+	meIds?: Set<number>;
 }) {
 	const body = (
 		<div className="flex flex-col gap-1.5">
@@ -91,12 +96,14 @@ function MatchBox({
 				placeholder={labels[0]}
 				winner={match?.winnerId === match?.playerA && match?.winnerId != null}
 				loser={match?.winnerId != null && match?.winnerId !== match?.playerA}
+				me={match != null && !!meIds?.has(match.playerA)}
 			/>
 			<Slot
 				player={match ? entrantsById.get(match.playerB) : undefined}
 				placeholder={labels[1]}
 				winner={match?.winnerId === match?.playerB && match?.winnerId != null}
 				loser={match?.winnerId != null && match?.winnerId !== match?.playerB}
+				me={match != null && !!meIds?.has(match.playerB)}
 			/>
 		</div>
 	);
@@ -118,12 +125,15 @@ export default function Bracket({
 	entrantsById,
 	onSelect,
 	format = "groups",
+	meIds,
 }: {
 	matches: Match[];
 	groups: GroupState[];
 	entrantsById: Map<number, Entrant>;
 	onSelect: (match: Match) => void;
 	format?: DisciplineFormat;
+	/** entrant ids to highlight as the current device's player/team */
+	meIds?: Set<number>;
 }) {
 	const quarters = matches.filter((m) => m.stage === "quarter");
 	const semis = matches.filter((m) => m.stage === "semi");
@@ -163,6 +173,7 @@ export default function Bracket({
 							entrantsById={entrantsById}
 							onSelect={onSelect}
 							title={`Ćwierćfinał ${index + 1}`}
+							meIds={meIds}
 						/>
 					))}
 					{byes.length > 0 && (
@@ -180,6 +191,7 @@ export default function Bracket({
 						entrantsById={entrantsById}
 						onSelect={onSelect}
 						title="Finał 🏆"
+						meIds={meIds}
 					/>
 					{champion && (
 						<div className="rounded-2xl bg-accent px-3 py-2.5 text-center text-sm font-black text-black">
@@ -196,6 +208,7 @@ export default function Bracket({
 							entrantsById={entrantsById}
 							onSelect={onSelect}
 							title="Półfinał 1"
+							meIds={meIds}
 						/>
 						{!singleSemi && (
 							<MatchBox
@@ -204,6 +217,7 @@ export default function Bracket({
 								entrantsById={entrantsById}
 								onSelect={onSelect}
 								title="Półfinał 2"
+								meIds={meIds}
 							/>
 						)}
 					</div>
@@ -225,6 +239,7 @@ export default function Bracket({
 							entrantsById={entrantsById}
 							onSelect={onSelect}
 							title="Finał 🏆"
+							meIds={meIds}
 						/>
 						{champion && (
 							<div className="rounded-2xl bg-accent px-3 py-2.5 text-center text-sm font-black text-black">
@@ -242,6 +257,7 @@ export default function Bracket({
 						entrantsById={entrantsById}
 						onSelect={onSelect}
 						title="Mecz o 3. miejsce 🥉"
+						meIds={meIds}
 					/>
 				</div>
 			)}

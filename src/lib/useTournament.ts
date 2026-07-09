@@ -31,6 +31,28 @@ export function entrantsFor(
 	);
 }
 
+/**
+ * Entrant ids in this discipline that are "me": my player id for group
+ * disciplines, my team's id for 2v2 (player and team ids live in separate id
+ * spaces, so this can't be a plain === on the entrant id).
+ */
+export function myEntrantIds(
+	discipline: DisciplineState,
+	myPlayerId: number | null,
+): Set<number> {
+	const ids = new Set<number>();
+	if (myPlayerId == null) return ids;
+	if (discipline.format === "bracket2v2") {
+		const team = discipline.teams.find(
+			(t) => t.playerA === myPlayerId || t.playerB === myPlayerId,
+		);
+		if (team) ids.add(team.id);
+	} else {
+		ids.add(myPlayerId);
+	}
+	return ids;
+}
+
 const MY_PLAYER_KEY = "kawalerski_my_player_id";
 const storeListeners = new Set<() => void>();
 

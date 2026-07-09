@@ -6,7 +6,7 @@ import GroupTable from "@/components/GroupTable";
 import MatchCard from "@/components/MatchCard";
 import WinnerModal from "@/components/WinnerModal";
 import { bracketDrawPreview, groupDrawPreview } from "@/lib/tournament";
-import { api, entrantsFor, useTournament } from "@/lib/useTournament";
+import { api, entrantsFor, myEntrantIds, useMyPlayerId, useTournament } from "@/lib/useTournament";
 import type { Match } from "@/lib/types";
 
 const GROUP_LETTERS = ["A", "B", "C", "D"];
@@ -21,6 +21,7 @@ const matchesWord = (n: number) => plural(n, "mecz", "mecze", "meczów");
 export default function DisciplinePage({ params }: { params: Promise<{ slug: string }> }) {
 	const { slug } = use(params);
 	const { state, playersById, mutate, isLoading } = useTournament();
+	const { myPlayerId } = useMyPlayerId();
 	const [selected, setSelected] = useState<Match | null>(null);
 	const [tab, setTab] = useState<number | "playoff">(1);
 	const [groupSize, setGroupSize] = useState(4);
@@ -166,6 +167,7 @@ export default function DisciplinePage({ params }: { params: Promise<{ slug: str
 	}
 
 	const entrantsById = entrantsFor(discipline, playersById);
+	const meIds = myEntrantIds(discipline, myPlayerId);
 	const dangerZone = (
 		<section className="mt-2 border-t border-white/10 pt-4">
 			{!resetOpen ? (
@@ -233,6 +235,7 @@ export default function DisciplinePage({ params }: { params: Promise<{ slug: str
 					entrantsById={entrantsById}
 					onSelect={setSelected}
 					format={discipline.format}
+					meIds={meIds}
 				/>
 				{dangerZone}
 				{selected && (
@@ -292,6 +295,7 @@ export default function DisciplinePage({ params }: { params: Promise<{ slug: str
 							entrantsById={entrantsById}
 							advancingCount={advancingCount}
 							advancingNote={advancingNote}
+							meIds={meIds}
 						/>
 					</section>
 					<section className="flex flex-col gap-2">
@@ -302,6 +306,7 @@ export default function DisciplinePage({ params }: { params: Promise<{ slug: str
 								entrantsById={entrantsById}
 								subtitle={m.round ? `Runda ${m.round}` : undefined}
 								onClick={() => setSelected(m)}
+								meIds={meIds}
 							/>
 						))}
 					</section>
@@ -314,6 +319,7 @@ export default function DisciplinePage({ params }: { params: Promise<{ slug: str
 					groups={discipline.groups}
 					entrantsById={entrantsById}
 					onSelect={setSelected}
+					meIds={meIds}
 				/>
 			)}
 

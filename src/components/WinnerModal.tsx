@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { celebrate } from "@/lib/confetti";
 import { api } from "@/lib/useTournament";
 import type { Entrant, Match } from "@/lib/types";
 
@@ -23,6 +24,8 @@ export default function WinnerModal({
 		setError(null);
 		try {
 			await api(`/api/matches/${match.id}/result`, { winnerId });
+			// A decided final crowns a champion — go big; otherwise a small pop.
+			celebrate(match.stage === "final");
 			onSaved();
 			onClose();
 		} catch (e) {

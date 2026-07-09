@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import JoinQr from "@/components/JoinQr";
 import PlayerName from "@/components/PlayerName";
-import { api, entrantsFor, useMyPlayerId, useTournament } from "@/lib/useTournament";
+import { api, entrantsFor, myEntrantIds, useMyPlayerId, useTournament } from "@/lib/useTournament";
 import type { DisciplineState } from "@/lib/types";
 
 function statusLabel(d: DisciplineState): string {
@@ -45,6 +46,7 @@ export default function Home() {
 		)
 		.slice(0, 6);
 	const top3 = state.general.filter((row) => row.points > 0).slice(0, 3);
+	const allDone = state.allDrawn && state.disciplines.every((d) => d.status === "done");
 
 	async function run(action: () => Promise<void>) {
 		setError(null);
@@ -113,6 +115,22 @@ export default function Home() {
 					{state.disciplines.map((d) => d.name.toLowerCase()).join(" · ")}
 				</p>
 			</header>
+
+			{allDone && (
+				<Link
+					href="/recap"
+					className="flex items-center justify-between rounded-3xl bg-accent px-5 py-4 font-bold text-black active:scale-[0.98]"
+				>
+					<span>🏁 Turniej zakończony — zobacz podsumowanie</span>
+					<span>→</span>
+				</Link>
+			)}
+
+			{!state.allDrawn && (
+				<section className="flex flex-col items-center gap-3 rounded-3xl bg-white/5 p-4">
+					<JoinQr />
+				</section>
+			)}
 
 			{!state.allDrawn && !myPlayer && (
 				<section className="flex flex-col gap-4 rounded-3xl bg-white/5 p-4">
@@ -214,7 +232,11 @@ export default function Home() {
 							>
 								<span>
 									{["🥇", "🥈", "🥉"][index]}{" "}
-									<PlayerName player={playersById.get(row.playerId)} bold={index === 0} />
+									<PlayerName
+										player={playersById.get(row.playerId)}
+										bold={index === 0}
+										me={row.playerId === myPlayerId}
+									/>
 									{index === 0 && " 👑"}
 								</span>
 								<span className="font-mono font-bold text-accent">{row.points} pkt</span>
@@ -236,6 +258,8 @@ export default function Home() {
 						const final = d.matches.find((m) => m.stage === "final");
 						const champion =
 							final?.winnerId != null ? entrantsFor(d, playersById).get(final.winnerId) : undefined;
+						const championMe =
+							final?.winnerId != null && myEntrantIds(d, myPlayerId).has(final.winnerId);
 						return (
 							<Link
 								key={d.slug}
@@ -251,7 +275,7 @@ export default function Home() {
 								</span>
 								{champion ? (
 									<span className="text-sm">
-										🏆 <PlayerName player={champion} bold />
+										🏆 <PlayerName player={champion} bold me={championMe} />
 									</span>
 								) : (
 									<span className="text-white/30">→</span>
@@ -268,20 +292,23 @@ export default function Home() {
 						Do rozegrania
 					</h2>
 					<div className="flex flex-col gap-2">
-						{pending.map(({ discipline, match, entrants }) => (
-							<Link
-								key={match.id}
-								href={`/d/${discipline.slug}`}
-								className="flex items-center justify-between rounded-2xl bg-white/5 px-4 py-3 text-sm active:bg-white/10"
-							>
-								<span>
-									<PlayerName player={entrants.get(match.playerA)} />
-									<span className="mx-2 text-white/40">vs</span>
-									<PlayerName player={entrants.get(match.playerB)} />
-								</span>
-								<span className="text-lg">{discipline.icon}</span>
-							</Link>
-						))}
+						{pending.map(({ discipline, match, entrants }) => {
+							const meHere = myEntrantIds(discipline, myPlayerId);
+							return (
+								<Link
+									key={match.id}
+									href={`/d/${discipline.slug}`}
+									className="flex items-center justify-between rounded-2xl bg-white/5 px-4 py-3 text-sm active:bg-white/10"
+								>
+									<span>
+										<PlayerName player={entrants.get(match.playerA)} me={meHere.has(match.playerA)} />
+										<span className="mx-2 text-white/40">vs</span>
+										<PlayerName player={entrants.get(match.playerB)} me={meHere.has(match.playerB)} />
+									</span>
+									<span className="text-lg">{discipline.icon}</span>
+								</Link>
+							);
+						})}
 					</div>
 				</section>
 			)}
@@ -298,12 +325,13 @@ export default function Home() {
 					)}
 					{state.players.map((player) => {
 						const deletable = player.disciplineIds.every((id) => !drawnIds.has(id));
+						const me = player.id === myPlayerId;
 						return (
 							<div
 								key={player.id}
-								className="flex items-center justify-between rounded-2xl bg-white/5 px-4 py-3"
+								className={`flex items-center justify-between rounded-2xl px-4 py-3 ${me ? "bg-accent/10" : "bg-white/5"}`}
 							>
-								<span>{player.name}</span>
+								<PlayerName player={player} me={me} />
 								<span className="flex items-center gap-2">
 									<span className="text-sm opacity-70">
 										{player.disciplineIds.map(disciplineIcon).join(" ")}

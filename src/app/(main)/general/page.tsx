@@ -1,10 +1,11 @@
 "use client";
 
 import PlayerName from "@/components/PlayerName";
-import { useTournament } from "@/lib/useTournament";
+import { useMyPlayerId, useTournament } from "@/lib/useTournament";
 
 export default function GeneralPage() {
 	const { state, playersById, isLoading } = useTournament();
+	const { myPlayerId } = useMyPlayerId();
 
 	if (isLoading || !state) {
 		return <p className="mt-20 text-center text-white/40">Ładowanie…</p>;
@@ -43,13 +44,17 @@ export default function GeneralPage() {
 						<tbody>
 							{state.general.map((row, index) => {
 								const player = playersById.get(row.playerId);
+								const me = row.playerId === myPlayerId;
 								return (
-									<tr key={row.playerId} className="border-t border-white/5">
+									<tr
+										key={row.playerId}
+										className={`border-t border-white/5 ${me ? "bg-accent/10" : ""}`}
+									>
 										<td className="py-2.5 pr-2 text-white/40">
 											{row.points > 0 ? (["🥇", "🥈", "🥉"][index] ?? index + 1) : index + 1}
 										</td>
 										<td className="py-2.5">
-											<PlayerName player={player} bold={index === 0 && anyPoints} />
+											<PlayerName player={player} bold={index === 0 && anyPoints} me={me} />
 											{index === 0 && row.points > 0 && " 👑"}
 										</td>
 										{state.disciplines.map((d) => {

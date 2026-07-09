@@ -52,7 +52,10 @@ export async function POST(
 		);
 	}
 
-	await db.prepare("UPDATE matches SET winner_id = ? WHERE id = ?").bind(winnerId, match.id).run();
+	await db
+		.prepare("UPDATE matches SET winner_id = ?, decided_at = ? WHERE id = ?")
+		.bind(winnerId, new Date().toISOString(), match.id)
+		.run();
 
 	// Auto-advance stages once the current one is complete.
 	const updated = await disciplineMatches(db, match.discipline_id);

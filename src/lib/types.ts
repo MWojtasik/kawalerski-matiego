@@ -41,6 +41,8 @@ export interface Match {
 	playerA: number;
 	playerB: number;
 	winnerId: number | null;
+	/** ISO timestamp when the result was entered; null while unplayed */
+	decidedAt: string | null;
 }
 
 export interface StandingRow {

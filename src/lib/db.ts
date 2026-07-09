@@ -24,6 +24,7 @@ export interface MatchRow {
 	player_a: number;
 	player_b: number;
 	winner_id: number | null;
+	decided_at: string | null;
 }
 
 export function toMatch(row: MatchRow): Match {
@@ -36,6 +37,7 @@ export function toMatch(row: MatchRow): Match {
 		playerA: row.player_a,
 		playerB: row.player_b,
 		winnerId: row.winner_id,
+		decidedAt: row.decided_at,
 	};
 }
 
@@ -104,7 +106,7 @@ export async function drawnDisciplineIds(db: D1Database): Promise<Set<number>> {
 
 export async function insertMatch(
 	db: D1Database,
-	m: Omit<Match, "id" | "winnerId">,
+	m: Omit<Match, "id" | "winnerId" | "decidedAt">,
 ): Promise<void> {
 	await db
 		.prepare(

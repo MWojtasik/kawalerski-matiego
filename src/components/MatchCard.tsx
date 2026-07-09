@@ -8,15 +8,20 @@ export default function MatchCard({
 	entrantsById,
 	onClick,
 	subtitle,
+	meIds,
 }: {
 	match: Match;
 	entrantsById: Map<number, Entrant>;
 	onClick?: () => void;
 	subtitle?: string;
+	/** entrant ids to highlight as the current device's player */
+	meIds?: Set<number>;
 }) {
 	const played = match.winnerId !== null;
 	const winnerA = match.winnerId === match.playerA;
 	const winnerB = match.winnerId === match.playerB;
+	const meA = !!meIds?.has(match.playerA);
+	const meB = !!meIds?.has(match.playerB);
 	return (
 		<button
 			type="button"
@@ -27,11 +32,11 @@ export default function MatchCard({
 			<div className="flex items-center justify-between gap-3">
 				<div className="flex min-w-0 flex-col gap-1">
 					<span className={played && !winnerA ? "text-white/50 line-through decoration-white/30" : ""}>
-						<PlayerName player={entrantsById.get(match.playerA)} bold={winnerA} />
+						<PlayerName player={entrantsById.get(match.playerA)} bold={winnerA} me={meA} />
 						{winnerA && <span className="ml-1.5">✅</span>}
 					</span>
 					<span className={played && !winnerB ? "text-white/50 line-through decoration-white/30" : ""}>
-						<PlayerName player={entrantsById.get(match.playerB)} bold={winnerB} />
+						<PlayerName player={entrantsById.get(match.playerB)} bold={winnerB} me={meB} />
 						{winnerB && <span className="ml-1.5">✅</span>}
 					</span>
 				</div>

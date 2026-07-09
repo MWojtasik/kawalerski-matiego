@@ -1,4 +1,13 @@
-import type { DisciplineStatus, Match, GeneralRow, Stage, StandingRow, Team } from "./types";
+import type {
+	DisciplineFormat,
+	DisciplineStatus,
+	Match,
+	GeneralRow,
+	Stage,
+	StandingRow,
+	Team,
+	TournamentState,
+} from "./types";
 
 export function shuffle<T>(items: T[], rand: () => number = Math.random): T[] {
 	const result = [...items];
@@ -414,4 +423,184 @@ export function generalClassification(
 		Object.values(placementsBySlug).filter((p) => p[row.playerId] === 1).length;
 	rows.sort((x, y) => y.points - x.points || titlesOf(y) - titlesOf(x) || x.playerId - y.playerId);
 	return rows;
+}
+
+/** A decided match, flattened with its discipline, for the TV live feed. */
+export interface FeedResult {
+	disciplineId: number;
+	slug: string;
+	icon: string;
+	name: string;
+	format: DisciplineFormat;
+	stage: Stage;
+	/** entrant ids: player ids for group disciplines, team ids for 2v2 */
+	winnerId: number;
+	loserId: number;
+	decidedAt: string | null;
+}
+
+/**
+ * Every decided match across disciplines, newest first (by `decidedAt`).
+ * Rows without a timestamp (pre-migration) sink to the bottom. Used by the TV
+ * screen's "co się dzieje" feed; name resolution stays in the view.
+ */
+export function recentResults(state: TournamentState, limit = 12): FeedResult[] {
+	const items: FeedResult[] = [];
+	for (const d of state.disciplines) {
+		for (const m of d.matches) {
+			if (m.winnerId === null) continue;
+			items.push({
+				disciplineId: d.id,
+				slug: d.slug,
+				icon: d.icon,
+				name: d.name,
+				format: d.format,
+				stage: m.stage,
+				winnerId: m.winnerId,
+				loserId: m.winnerId === m.playerA ? m.playerB : m.playerA,
+				decidedAt: m.decidedAt,
+			});
+		}
+	}
+	items.sort((a, b) => (b.decidedAt ?? "").localeCompare(a.decidedAt ?? ""));
+	return items.slice(0, limit);
+}
+
+/** An undecided match in a running discipline, flattened with its discipline. */
+export interface LiveMatch {
+	disciplineId: number;
+	slug: string;
+	icon: string;
+	name: string;
+	format: DisciplineFormat;
+	match: Match;
+}
+
+/** Undecided matches in disciplines that are currently playing (group/playoff). */
+export function liveMatches(state: TournamentState, limit = 8): LiveMatch[] {
+	const items: LiveMatch[] = [];
+	for (const d of state.disciplines) {
+		if (d.status !== "group" && d.status !== "playoff") continue;
+		for (const m of d.matches) {
+			if (m.winnerId === null) {
+				items.push({
+					disciplineId: d.id,
+					slug: d.slug,
+					icon: d.icon,
+					name: d.name,
+					format: d.format,
+					match: m,
+				});
+			}
+		}
+	}
+	return items.slice(0, limit);
+}
+
+export interface RecapStats {
+	totalPlayers: number;
+	decidedMatches: number;
+	/** overall winner (general leader); null if nobody scored */
+	championId: number | null;
+	podium: { playerId: number; points: number }[];
+	disciplineChampions: {
+		disciplineId: number;
+		slug: string;
+		name: string;
+		icon: string;
+		/** two players for a 2v2 discipline, one otherwise */
+		playerIds: number[];
+	}[];
+	/** played > 0 and never lost, across every discipline */
+	unbeatenIds: number[];
+	/** the "played the most matches" award; null with no matches */
+	mostActive: { playerId: number; played: number } | null;
+	/** the "pechowiec" — most losses (tie: fewest wins, then lowest id); null if nobody lost */
+	unluckyId: number | null;
+}
+
+/**
+ * End-of-tournament recap numbers, derived purely from state. Team results are
+ * credited to both members, so wins/losses are per player. Meant for the
+ * `/recap` page once every discipline is done.
+ */
+export function recapStats(state: TournamentState): RecapStats {
+	const record = new Map<number, { wins: number; losses: number; played: number }>();
+	const bump = (id: number, won: boolean) => {
+		const r = record.get(id) ?? { wins: 0, losses: 0, played: 0 };
+		r.played++;
+		if (won) r.wins++;
+		else r.losses++;
+		record.set(id, r);
+	};
+
+	let decidedMatches = 0;
+	for (const d of state.disciplines) {
+		const teamMembers = new Map<number, number[]>(d.teams.map((t) => [t.id, [t.playerA, t.playerB]]));
+		const membersOf = (entrantId: number) => teamMembers.get(entrantId) ?? [entrantId];
+		for (const m of d.matches) {
+			if (m.winnerId === null) continue;
+			decidedMatches++;
+			const loserEntrant = m.winnerId === m.playerA ? m.playerB : m.playerA;
+			for (const p of membersOf(m.winnerId)) bump(p, true);
+			for (const p of membersOf(loserEntrant)) bump(p, false);
+		}
+	}
+
+	const scored = state.general.filter((r) => r.points > 0);
+	const podium = scored.slice(0, 3).map((r) => ({ playerId: r.playerId, points: r.points }));
+
+	const disciplineChampions = state.disciplines
+		.map((d) => ({
+			disciplineId: d.id,
+			slug: d.slug,
+			name: d.name,
+			icon: d.icon,
+			playerIds: Object.entries(d.placements)
+				.filter(([, place]) => place === 1)
+				.map(([id]) => Number(id))
+				.sort((a, b) => a - b),
+		}))
+		.filter((c) => c.playerIds.length > 0);
+
+	const entries = [...record.entries()];
+	const unbeatenIds = entries
+		.filter(([, r]) => r.played > 0 && r.losses === 0)
+		.map(([id]) => id)
+		.sort((a, b) => a - b);
+
+	let mostActive: { playerId: number; played: number } | null = null;
+	for (const [id, r] of entries) {
+		if (
+			mostActive === null ||
+			r.played > mostActive.played ||
+			(r.played === mostActive.played && id < mostActive.playerId)
+		) {
+			mostActive = { playerId: id, played: r.played };
+		}
+	}
+
+	let unluckyId: number | null = null;
+	let worst = { losses: 0, wins: Infinity, id: Infinity };
+	for (const [id, r] of entries) {
+		if (r.losses === 0) continue;
+		if (
+			r.losses > worst.losses ||
+			(r.losses === worst.losses && (r.wins < worst.wins || (r.wins === worst.wins && id < worst.id)))
+		) {
+			worst = { losses: r.losses, wins: r.wins, id };
+			unluckyId = id;
+		}
+	}
+
+	return {
+		totalPlayers: state.players.length,
+		decidedMatches,
+		championId: podium[0]?.playerId ?? null,
+		podium,
+		disciplineChampions,
+		unbeatenIds,
+		mostActive,
+		unluckyId,
+	};
 }
