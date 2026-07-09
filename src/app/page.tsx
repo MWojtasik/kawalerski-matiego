@@ -6,8 +6,6 @@ import PlayerName from "@/components/PlayerName";
 import { api, entrantsFor, useMyPlayerId, useTournament } from "@/lib/useTournament";
 import type { DisciplineState } from "@/lib/types";
 
-const EMOJI_POOL = ["🍺", "😎", "🦁", "🐗", "🦈", "🤠", "🥷", "🧨", "🍕", "🦍", "🐺", "🔥", "⚡", "🎸", "🚀", "🃏"];
-
 function statusLabel(d: DisciplineState): string {
 	if (d.status === "waiting") return "kliknij, żeby wylosować";
 	if (d.status === "done") return "zakończony 🏁";
@@ -20,7 +18,6 @@ export default function Home() {
 	const { state, playersById, mutate, isLoading } = useTournament();
 	const { myPlayerId, setMyPlayerId } = useMyPlayerId();
 	const [name, setName] = useState("");
-	const [emoji, setEmoji] = useState<string | null>(null);
 	const [selectedDisciplines, setSelectedDisciplines] = useState<number[] | null>(null);
 	const [error, setError] = useState<string | null>(null);
 	const [joining, setJoining] = useState(false);
@@ -37,7 +34,6 @@ export default function Home() {
 	);
 	const undrawn = state.disciplines.filter((d) => d.status === "waiting");
 	const chosenDisciplines = selectedDisciplines ?? undrawn.map((d) => d.id);
-	const chosenEmoji = emoji ?? EMOJI_POOL[state.players.length % EMOJI_POOL.length];
 	const disciplineIcon = (id: number) => state.disciplines.find((d) => d.id === id)?.icon;
 
 	const pending = state.disciplines
@@ -69,7 +65,6 @@ export default function Home() {
 			await run(async () => {
 				const created = await api<{ id: number }>("/api/players", {
 					name: trimmed,
-					emoji: chosenEmoji,
 					disciplineIds: chosenDisciplines,
 				});
 				setMyPlayerId(created.id);
@@ -80,7 +75,6 @@ export default function Home() {
 			setJoining(false);
 		}
 		setName("");
-		setEmoji(null);
 		setSelectedDisciplines(null);
 	}
 
@@ -132,23 +126,6 @@ export default function Home() {
 						className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none placeholder:text-white/30 focus:border-accent"
 					/>
 					<div>
-						<p className="mb-2 text-[11px] uppercase tracking-wide text-white/40">Avatar</p>
-						<div className="grid grid-cols-8 gap-1.5">
-							{EMOJI_POOL.map((e) => (
-								<button
-									key={e}
-									type="button"
-									onClick={() => setEmoji(e)}
-									className={`rounded-xl py-1.5 text-xl ${
-										chosenEmoji === e ? "bg-accent/30 ring-2 ring-accent" : "bg-white/5"
-									}`}
-								>
-									{e}
-								</button>
-							))}
-						</div>
-					</div>
-					<div>
 						<p className="mb-2 text-[11px] uppercase tracking-wide text-white/40">W co grasz?</p>
 						<div className="flex flex-wrap gap-2">
 							{undrawn.map((d) => {
@@ -192,7 +169,7 @@ export default function Home() {
 			{myPlayer && !state.allDrawn && (
 				<section className="flex flex-col gap-3 rounded-3xl border border-accent/30 bg-accent/10 px-4 py-4">
 					<span className="text-lg font-bold">
-						{myPlayer.emoji} Grasz jako {myPlayer.name}{" "}
+						Grasz jako {myPlayer.name}{" "}
 						<span className="text-sm font-normal opacity-70">
 							{myPlayer.disciplineIds.map(disciplineIcon).join(" ")}
 						</span>
@@ -326,10 +303,7 @@ export default function Home() {
 								key={player.id}
 								className="flex items-center justify-between rounded-2xl bg-white/5 px-4 py-3"
 							>
-								<span>
-									<span className="mr-1">{player.emoji}</span>
-									{player.name}
-								</span>
+								<span>{player.name}</span>
 								<span className="flex items-center gap-2">
 									<span className="text-sm opacity-70">
 										{player.disciplineIds.map(disciplineIcon).join(" ")}

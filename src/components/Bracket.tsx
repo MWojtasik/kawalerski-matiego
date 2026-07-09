@@ -65,7 +65,7 @@ function Slot({
 						: "bg-white/10"
 			}`}
 		>
-			{player.emoji} {player.name}
+			{player.name}
 		</div>
 	);
 }
@@ -167,7 +167,7 @@ export default function Bracket({
 					))}
 					{byes.length > 0 && (
 						<p className="text-xs text-white/40">
-							Wolny los do półfinału: {byes.map((e) => `${e.emoji} ${e.name}`).join(", ")}
+							Wolny los do półfinału: {byes.map((e) => e.name).join(", ")}
 						</p>
 					)}
 				</div>
@@ -183,7 +183,7 @@ export default function Bracket({
 					/>
 					{champion && (
 						<div className="rounded-2xl bg-accent px-3 py-2.5 text-center text-sm font-black text-black">
-							🏆 {champion.emoji} {champion.name}
+							🏆 {champion.name}
 						</div>
 					)}
 				</div>
@@ -228,7 +228,7 @@ export default function Bracket({
 						/>
 						{champion && (
 							<div className="rounded-2xl bg-accent px-3 py-2.5 text-center text-sm font-black text-black">
-								🏆 {champion.emoji} {champion.name}
+								🏆 {champion.name}
 							</div>
 						)}
 					</div>

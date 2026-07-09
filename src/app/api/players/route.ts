@@ -12,7 +12,6 @@ export async function POST(request: Request) {
 	}
 	const body = (await request.json()) as {
 		name?: string;
-		emoji?: string;
 		disciplineIds?: number[];
 	};
 	const name = body.name?.trim() ?? "";
@@ -32,10 +31,9 @@ export async function POST(request: Request) {
 			{ status: 400 },
 		);
 	}
-	const emoji = body.emoji?.trim() || "🍺";
 	const inserted = await db
-		.prepare("INSERT INTO players (name, emoji) VALUES (?, ?) RETURNING id")
-		.bind(name, emoji)
+		.prepare("INSERT INTO players (name) VALUES (?) RETURNING id")
+		.bind(name)
 		.first<{ id: number }>();
 	for (const disciplineId of disciplineIds) {
 		await db

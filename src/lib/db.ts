@@ -41,7 +41,7 @@ export function toMatch(row: MatchRow): Match {
 
 export async function loadPlayers(db: D1Database): Promise<Player[]> {
 	const [{ results: players }, { results: signups }] = await Promise.all([
-		db.prepare("SELECT id, name, emoji FROM players ORDER BY id").all<Omit<Player, "disciplineIds">>(),
+		db.prepare("SELECT id, name FROM players ORDER BY id").all<Omit<Player, "disciplineIds">>(),
 		db
 			.prepare("SELECT player_id, discipline_id FROM player_disciplines")
 			.all<{ player_id: number; discipline_id: number }>(),

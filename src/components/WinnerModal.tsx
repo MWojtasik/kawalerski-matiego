@@ -63,7 +63,7 @@ export default function WinnerModal({
 											: "bg-white/10"
 									}`}
 								>
-									{entrant.emoji} {entrant.name}
+									{entrant.name}
 								</button>
 							),
 					)}

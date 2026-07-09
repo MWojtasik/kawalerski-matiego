@@ -8,10 +8,5 @@ export default function PlayerName({
 	bold?: boolean;
 }) {
 	if (!player) return <span className="text-white/40">???</span>;
-	return (
-		<span className={bold ? "font-semibold" : ""}>
-			<span className="mr-1">{player.emoji}</span>
-			{player.name}
-		</span>
-	);
+	return <span className={bold ? "font-semibold" : ""}>{player.name}</span>;
 }
