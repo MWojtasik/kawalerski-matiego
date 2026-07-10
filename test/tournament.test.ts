@@ -648,7 +648,96 @@ describe("recapStats", () => {
 		expect(r.disciplineChampions[0].playerIds).toEqual([1]);
 		expect(r.unbeatenIds).toEqual([1]);
 		expect(r.mostActive).toEqual({ playerId: 1, played: 2 });
-		expect(r.unluckyId).toBe(3);
+		expect(r.unlucky).toEqual({ playerId: 3, losses: 2 });
+		expect(r.table).toEqual([
+			{ playerId: 1, points: 2, wins: 2, losses: 0, placements: { bilard: 1 } },
+			{ playerId: 2, points: 1, wins: 1, losses: 1, placements: { bilard: 2 } },
+			{ playerId: 3, points: 0, wins: 0, losses: 2, placements: { bilard: 3 } },
+		]);
+		expect(r.longestStreak).toEqual({ playerId: 1, length: 2 });
+	});
+
+	it("table follows general order and omits placements the player didn't earn", () => {
+		const state: TournamentState = {
+			players: [
+				{ id: 1, name: "A", disciplineIds: [1, 2] },
+				{ id: 2, name: "B", disciplineIds: [1] },
+			],
+			allDrawn: true,
+			disciplines: [
+				disc({
+					status: "done",
+					matches: [stamped(1, 2, "2026-07-09T10:00:00.000Z")],
+					placements: { 1: 1, 2: 2 },
+				}),
+				disc({ id: 2, slug: "dart", name: "Dart", icon: "🎯", status: "done", placements: { 1: 1 } }),
+			],
+			general: [
+				{ playerId: 1, points: 1, breakdown: { bilard: 1 } },
+				{ playerId: 2, points: 0, breakdown: {} },
+			],
+		};
+		expect(recapStats(state).table).toEqual([
+			{ playerId: 1, points: 1, wins: 1, losses: 0, placements: { bilard: 1, dart: 1 } },
+			{ playerId: 2, points: 0, wins: 0, losses: 1, placements: { bilard: 2 } },
+		]);
+	});
+
+	it("counts the win streak across disciplines in decided-at order", () => {
+		const state = stateOf([
+			disc({
+				matches: [
+					stamped(1, 2, "2026-07-09T10:00:00.000Z"),
+					stamped(1, 2, "2026-07-09T10:30:00.000Z"),
+					stamped(1, 2, "2026-07-09T10:45:00.000Z"),
+				],
+			}),
+			// a loss in another discipline splits what would otherwise be a run of 3
+			disc({
+				id: 2,
+				slug: "dart",
+				matches: [stamped(3, 1, "2026-07-09T10:15:00.000Z")],
+			}),
+		]);
+		expect(recapStats(state).longestStreak).toEqual({ playerId: 1, length: 2 });
+	});
+
+	it("breaks streak-length ties by lower player id and ignores single wins", () => {
+		const tied = stateOf([
+			disc({
+				matches: [
+					stamped(5, 1, "2026-07-09T10:00:00.000Z"),
+					stamped(5, 1, "2026-07-09T10:10:00.000Z"),
+					stamped(3, 2, "2026-07-09T10:20:00.000Z"),
+					stamped(3, 2, "2026-07-09T10:30:00.000Z"),
+				],
+			}),
+		]);
+		expect(recapStats(tied).longestStreak).toEqual({ playerId: 3, length: 2 });
+
+		const singles = stateOf([
+			disc({
+				matches: [
+					stamped(1, 2, "2026-07-09T10:00:00.000Z"),
+					stamped(2, 1, "2026-07-09T10:10:00.000Z"),
+					stamped(1, 2, "2026-07-09T10:20:00.000Z"),
+				],
+			}),
+		]);
+		expect(recapStats(singles).longestStreak).toBeNull();
+	});
+
+	it("counts matches without a decided-at timestamp first in the streak order", () => {
+		const state = stateOf([
+			disc({
+				matches: [
+					match({ winner: 1, loser: 2, decidedAt: null }),
+					stamped(1, 3, "2026-07-09T10:00:00.000Z"),
+					stamped(2, 1, "2026-07-09T11:00:00.000Z"),
+				],
+			}),
+		]);
+		expect(recapStats(state).longestStreak).toEqual({ playerId: 1, length: 2 });
 	});
 
 	it("credits 2v2 team results to both members", () => {
@@ -681,6 +770,14 @@ describe("recapStats", () => {
 		const r = recapStats(state);
 		expect(r.disciplineChampions[0].playerIds).toEqual([4, 5]);
 		expect(r.unbeatenIds).toEqual([4, 5]);
-		expect(r.unluckyId).toBe(6);
+		expect(r.unlucky).toEqual({ playerId: 6, losses: 1 });
+		expect(r.table[0]).toEqual({
+			playerId: 4,
+			points: 1,
+			wins: 1,
+			losses: 0,
+			placements: { foos: 1 },
+		});
+		expect(r.longestStreak).toBeNull();
 	});
 });

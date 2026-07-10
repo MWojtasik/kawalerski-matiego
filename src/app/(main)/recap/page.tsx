@@ -86,27 +86,70 @@ export default function RecapPage() {
 				</section>
 			)}
 
-			{stats.podium.length > 0 && (
+			{stats.table.length > 0 && (
 				<section>
-					<h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-white/40">Podium</h2>
-					<div className="flex flex-col gap-2">
-						{stats.podium.map((row, i) => (
-							<div
-								key={row.playerId}
-								className="flex items-center justify-between rounded-2xl bg-white/5 px-4 py-3"
-							>
-								<span className="text-lg">
-									{medals[i]}{" "}
-									<PlayerName
-										player={playersById.get(row.playerId)}
-										bold={i === 0}
-										me={row.playerId === myPlayerId}
-									/>
-								</span>
-								<span className="font-mono font-bold text-accent">{row.points} pkt</span>
-							</div>
-						))}
+					<h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-white/40">
+						Klasyfikacja końcowa
+					</h2>
+					<div className="overflow-x-auto rounded-2xl bg-white/5 px-4 py-2">
+						<table className="w-full text-sm">
+							<thead>
+								<tr className="text-left text-[11px] uppercase tracking-wide text-white/40">
+									<th className="py-2 pr-2 font-normal">#</th>
+									<th className="py-2 font-normal">Gracz</th>
+									{state.disciplines.map((d) => (
+										<th key={d.slug} className="py-2 text-center font-normal">
+											{d.icon}
+										</th>
+									))}
+									<th className="py-2 text-right font-normal">W-L</th>
+									<th className="py-2 pl-2 text-right font-normal">Σ</th>
+								</tr>
+							</thead>
+							<tbody>
+								{stats.table.map((row, index) => {
+									const player = playersById.get(row.playerId);
+									const me = row.playerId === myPlayerId;
+									return (
+										<tr
+											key={row.playerId}
+											className={`border-t border-white/5 ${me ? "bg-accent/10" : ""}`}
+										>
+											<td className="py-2.5 pr-2 text-white/40">
+												{row.points > 0 ? (medals[index] ?? index + 1) : index + 1}
+											</td>
+											<td className="py-2.5">
+												<PlayerName player={player} bold={index === 0} me={me} />
+												{index === 0 && row.points > 0 && " 👑"}
+											</td>
+											{state.disciplines.map((d) => {
+												const place = row.placements[d.slug];
+												const plays = player?.disciplineIds.includes(d.id);
+												return (
+													<td key={d.slug} className="py-2.5 text-center tabular-nums text-white/70">
+														{place !== undefined
+															? (medals[place - 1] ?? `${place}.`)
+															: plays
+																? "–"
+																: "✕"}
+													</td>
+												);
+											})}
+											<td className="py-2.5 text-right tabular-nums text-white/70">
+												{row.wins}-{row.losses}
+											</td>
+											<td className="py-2.5 pl-2 text-right font-mono font-bold text-accent">
+												{row.points}
+											</td>
+										</tr>
+									);
+								})}
+							</tbody>
+						</table>
 					</div>
+					<p className="mt-2 text-center text-xs text-white/30">
+						Miejsce w dyscyplinie · W-L = wygrane-przegrane · Σ = punkty generalki · ✕ nie grał
+					</p>
 				</section>
 			)}
 
@@ -153,6 +196,15 @@ export default function RecapPage() {
 							))}
 						</Award>
 					)}
+					{stats.longestStreak && (
+						<Award icon="⚡" title="Seria zwycięstw">
+							<PlayerName
+								player={playersById.get(stats.longestStreak.playerId)}
+								me={stats.longestStreak.playerId === myPlayerId}
+							/>{" "}
+							<span className="text-white/40">· {stats.longestStreak.length} z rzędu</span>
+						</Award>
+					)}
 					{stats.mostActive && (
 						<Award icon="🔥" title="Największy młyn">
 							<PlayerName
@@ -162,12 +214,15 @@ export default function RecapPage() {
 							<span className="text-white/40">· {stats.mostActive.played} meczów</span>
 						</Award>
 					)}
-					{stats.unluckyId != null && (
+					{stats.unlucky && (
 						<Award icon="🃏" title="Pechowiec wieczoru">
 							<PlayerName
-								player={playersById.get(stats.unluckyId)}
-								me={stats.unluckyId === myPlayerId}
-							/>
+								player={playersById.get(stats.unlucky.playerId)}
+								me={stats.unlucky.playerId === myPlayerId}
+							/>{" "}
+							<span className="text-white/40">
+								· najwięcej porażek: {stats.unlucky.losses}
+							</span>
 						</Award>
 					)}
 					<Award icon="📊" title="Liczby">
