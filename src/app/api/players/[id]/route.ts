@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { drawnDisciplineIds, getDb, loadDisciplines } from "@/lib/db";
+import { drawnDisciplineIds, getDb, getEnv, loadDisciplines } from "@/lib/db";
 
 async function playerDisciplineIds(db: D1Database, playerId: number): Promise<number[]> {
 	const { results } = await db
@@ -10,10 +10,15 @@ async function playerDisciplineIds(db: D1Database, playerId: number): Promise<nu
 }
 
 export async function DELETE(
-	_request: Request,
+	request: Request,
 	{ params }: { params: Promise<{ id: string }> },
 ) {
-	const db = await getDb();
+	const env = await getEnv();
+	const db = env.DB;
+	const body = (await request.json().catch(() => ({}))) as { pin?: string };
+	if (env.ADMIN_PIN && body.pin !== env.ADMIN_PIN) {
+		return NextResponse.json({ error: "Zły PIN" }, { status: 403 });
+	}
 	const { id } = await params;
 	const playerId = Number(id);
 	const [current, drawn] = await Promise.all([
