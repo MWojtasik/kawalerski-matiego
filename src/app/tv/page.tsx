@@ -85,25 +85,23 @@ export default function TvPage() {
 		entrantsByDiscipline.get(disciplineId)?.get(entrantId)?.name ?? "???";
 
 	return (
-		<div className="flex min-h-dvh flex-col gap-4 p-6">
-			<header className="flex items-center justify-between gap-4">
+		<div className="flex min-h-dvh flex-col gap-6 p-8">
+			<header className="flex items-center justify-between gap-6">
 				<div>
-					<h1 className="text-4xl font-black tracking-tight">🍻 Kawalerski Matiego</h1>
-					<p className="text-sm text-white/40">
+					<h1 className="text-5xl font-black tracking-tight">🍻 Kawalerski Matiego</h1>
+					<p className="mt-1 text-lg text-white/40">
 						{state.disciplines.map((d) => `${d.icon} ${d.name}`).join("   ·   ")}
 					</p>
 				</div>
-				<div className="flex items-center gap-5">
-					<span className="font-mono text-3xl tabular-nums text-white/70">{clock ?? "--:--"}</span>
-					<div className="scale-90">
-						<JoinQr size={110} caption={null} />
-					</div>
+				<div className="flex items-center gap-6">
+					<span className="font-mono text-4xl tabular-nums text-white/70">{clock ?? "--:--"}</span>
+					<JoinQr size={120} caption={null} />
 				</div>
 			</header>
 
-			<main className="grid min-h-0 flex-1 grid-cols-[2fr_3fr] gap-6">
-				<section className="flex min-h-0 flex-col gap-3">
-					<h2 className="text-lg font-bold text-white/80">🏆 Klasyfikacja generalna</h2>
+			<main className="grid min-h-0 flex-1 grid-cols-[2fr_3fr] gap-10">
+				<section className="flex min-h-0 flex-col gap-4">
+					<h2 className="text-2xl font-bold text-white/80">🏆 Klasyfikacja generalna</h2>
 					<GeneralTable state={state} playersById={playersById} />
 				</section>
 				<section key={scene} className="pop-in min-h-0">
@@ -118,19 +116,19 @@ export default function TvPage() {
 				</section>
 			</main>
 
-			<footer className="min-h-[3.5rem] border-t border-white/10 pt-3">
+			<footer className="min-h-[4.5rem] border-t border-white/10 pt-4">
 				{feed.length === 0 ? (
-					<p className="text-center text-sm text-white/30">Wyniki pojawią się tutaj na żywo…</p>
+					<p className="text-center text-lg text-white/30">Wyniki pojawią się tutaj na żywo…</p>
 				) : (
-					<div className="flex items-center gap-3 overflow-hidden">
-						<span className="shrink-0 text-xs font-semibold uppercase tracking-wide text-white/40">
+					<div className="flex items-center gap-4 overflow-hidden">
+						<span className="shrink-0 text-sm font-semibold uppercase tracking-wide text-white/40">
 							Ostatnie wyniki
 						</span>
-						<div className="flex min-w-0 flex-1 gap-2 overflow-hidden">
+						<div className="flex min-w-0 flex-1 gap-3 overflow-hidden">
 							{feed.map((r, i) => (
 								<span
 									key={`${r.disciplineId}-${i}`}
-									className="shrink-0 rounded-full bg-white/5 px-3 py-1.5 text-sm"
+									className="shrink-0 rounded-full bg-white/5 px-4 py-2 text-lg"
 								>
 									<span className="mr-1">{r.icon}</span>
 									<span className="font-semibold text-accent">{nameOf(r.disciplineId, r.winnerId)}</span>
@@ -158,25 +156,25 @@ function GeneralTable({
 
 	if (state.players.length === 0) {
 		return (
-			<p className="rounded-2xl bg-white/5 px-4 py-10 text-center text-white/40">
+			<p className="rounded-2xl bg-white/5 px-6 py-12 text-center text-xl text-white/40">
 				Nikt się jeszcze nie zapisał 🤷
 			</p>
 		);
 	}
 
 	return (
-		<div className="min-h-0 overflow-y-auto rounded-2xl bg-white/5 px-4 py-2">
-			<table className="w-full">
+		<div className="min-h-0 overflow-y-auto rounded-2xl bg-white/5 px-6 py-3">
+			<table className="w-full text-xl">
 				<thead>
-					<tr className="text-left text-xs uppercase tracking-wide text-white/40">
-						<th className="py-2 pr-2 font-normal">#</th>
-						<th className="py-2 font-normal">Gracz</th>
+					<tr className="text-left text-sm uppercase tracking-wide text-white/40">
+						<th className="py-3 pr-3 font-normal">#</th>
+						<th className="py-3 font-normal">Gracz</th>
 						{state.disciplines.map((d) => (
-							<th key={d.slug} className="py-2 text-center font-normal">
+							<th key={d.slug} className="py-3 text-center font-normal">
 								{d.icon}
 							</th>
 						))}
-						<th className="py-2 text-right font-normal">Σ</th>
+						<th className="py-3 text-right font-normal">Σ</th>
 					</tr>
 				</thead>
 				<tbody>
@@ -184,22 +182,22 @@ function GeneralTable({
 						const player = playersById.get(row.playerId);
 						return (
 							<tr key={row.playerId} className="border-t border-white/5">
-								<td className="py-2.5 pr-2 text-white/40">
+								<td className="py-3.5 pr-3 text-white/40">
 									{row.points > 0 ? (["🥇", "🥈", "🥉"][index] ?? index + 1) : index + 1}
 								</td>
-								<td className={`py-2.5 ${index === 0 && anyPoints ? "font-semibold" : ""}`}>
+								<td className={`py-3.5 ${index === 0 && anyPoints ? "font-semibold" : ""}`}>
 									{player?.name ?? "???"}
 									{index === 0 && row.points > 0 && " 👑"}
 								</td>
 								{state.disciplines.map((d) => {
 									const plays = player?.disciplineIds.includes(d.id);
 									return (
-										<td key={d.slug} className="py-2.5 text-center tabular-nums text-white/70">
+										<td key={d.slug} className="py-3.5 text-center tabular-nums text-white/70">
 											{row.breakdown[d.slug] ?? (plays ? "–" : "✕")}
 										</td>
 									);
 								})}
-								<td className="py-2.5 text-right font-mono font-bold text-accent">{row.points}</td>
+								<td className="py-3.5 text-right font-mono font-bold text-accent">{row.points}</td>
 							</tr>
 						);
 					})}
@@ -211,12 +209,12 @@ function GeneralTable({
 
 function LobbyScene({ players }: { players: Player[] }) {
 	return (
-		<div className="flex h-full flex-col items-center justify-center gap-6 text-center">
-			<h2 className="text-3xl font-bold">Wbijajcie do gry! 🎉</h2>
+		<div className="flex h-full flex-col items-center justify-center gap-8 text-center">
+			<h2 className="text-4xl font-bold">Wbijajcie do gry! 🎉</h2>
 			<div className="scale-125">
-				<JoinQr size={180} caption="📱 Zeskanuj telefonem i dołącz" />
+				<JoinQr size={200} caption="📱 Zeskanuj telefonem i dołącz" />
 			</div>
-			<p className="text-lg text-white/60">
+			<p className="text-2xl text-white/60">
 				Zapisanych: <span className="font-bold text-accent">{players.length}</span> — czekamy aż
 				organizator wylosuje grupy.
 			</p>
@@ -239,12 +237,12 @@ function DisciplineScene({
 		discipline.groups.length === 1 ? 4 : discipline.groups.length === 2 ? 2 : 1;
 
 	return (
-		<div className="flex h-full flex-col gap-4">
-			<div className="flex items-center gap-3">
-				<span className="text-5xl">{discipline.icon}</span>
+		<div className="flex h-full flex-col gap-6">
+			<div className="flex items-center gap-4">
+				<span className="text-6xl">{discipline.icon}</span>
 				<div>
-					<h2 className="text-3xl font-black">{discipline.name}</h2>
-					<p className="text-sm text-white/50">
+					<h2 className="text-4xl font-black">{discipline.name}</h2>
+					<p className="text-lg text-white/50">
 						{discipline.status === "done"
 							? "Zakończone 🏁"
 							: isBracket
@@ -257,12 +255,13 @@ function DisciplineScene({
 			</div>
 
 			{champion && (
-				<div className="rounded-3xl bg-accent px-6 py-4 text-center text-3xl font-black text-black">
+				<div className="rounded-3xl bg-accent px-8 py-5 text-center text-4xl font-black text-black">
 					🏆 Mistrz: {champion.name}
 				</div>
 			)}
 
-			<div className="min-h-0 flex-1 overflow-hidden text-base">
+			{/* Shared components (Bracket/GroupTable) have fixed mobile-sized text — zoom them up for the TV. */}
+			<div className="min-h-0 flex-1 overflow-hidden [zoom:1.35]">
 				{isBracket || playoffStarted ? (
 					<Bracket
 						matches={discipline.matches}
@@ -275,7 +274,7 @@ function DisciplineScene({
 					<div className="grid grid-cols-2 gap-x-6 gap-y-4">
 						{discipline.groups.map((g) => (
 							<div key={g.no} className="rounded-2xl bg-white/5 px-4 py-3">
-								<p className="mb-1 text-sm font-semibold text-white/50">
+								<p className="mb-2 text-sm font-semibold text-white/50">
 									Grupa {GROUP_LETTERS[g.no - 1] ?? g.no}
 								</p>
 								<GroupTable
