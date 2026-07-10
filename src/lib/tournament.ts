@@ -516,7 +516,19 @@ export interface RecapStats {
 	/** the "played the most matches" award; null with no matches */
 	mostActive: { playerId: number; played: number } | null;
 	/** the "pechowiec" — most losses (tie: fewest wins, then lowest id); null if nobody lost */
-	unluckyId: number | null;
+	unlucky: { playerId: number; losses: number } | null;
+	/** one row per player, ordered like the general classification */
+	table: {
+		playerId: number;
+		/** general-classification points (one per match won) */
+		points: number;
+		wins: number;
+		losses: number;
+		/** slug -> final place; missing key = didn't place in that discipline */
+		placements: Record<string, number>;
+	}[];
+	/** longest consecutive-wins run (by decidedAt order); null if nobody won twice in a row */
+	longestStreak: { playerId: number; length: number } | null;
 }
 
 /**
@@ -535,6 +547,12 @@ export function recapStats(state: TournamentState): RecapStats {
 	};
 
 	let decidedMatches = 0;
+	const decided: {
+		decidedAt: string | null;
+		matchId: number;
+		winners: number[];
+		losers: number[];
+	}[] = [];
 	for (const d of state.disciplines) {
 		const teamMembers = new Map<number, number[]>(d.teams.map((t) => [t.id, [t.playerA, t.playerB]]));
 		const membersOf = (entrantId: number) => teamMembers.get(entrantId) ?? [entrantId];
@@ -544,6 +562,12 @@ export function recapStats(state: TournamentState): RecapStats {
 			const loserEntrant = m.winnerId === m.playerA ? m.playerB : m.playerA;
 			for (const p of membersOf(m.winnerId)) bump(p, true);
 			for (const p of membersOf(loserEntrant)) bump(p, false);
+			decided.push({
+				decidedAt: m.decidedAt,
+				matchId: m.id,
+				winners: membersOf(m.winnerId),
+				losers: membersOf(loserEntrant),
+			});
 		}
 	}
 
@@ -580,7 +604,7 @@ export function recapStats(state: TournamentState): RecapStats {
 		}
 	}
 
-	let unluckyId: number | null = null;
+	let unlucky: { playerId: number; losses: number } | null = null;
 	let worst = { losses: 0, wins: Infinity, id: Infinity };
 	for (const [id, r] of entries) {
 		if (r.losses === 0) continue;
@@ -589,7 +613,50 @@ export function recapStats(state: TournamentState): RecapStats {
 			(r.losses === worst.losses && (r.wins < worst.wins || (r.wins === worst.wins && id < worst.id)))
 		) {
 			worst = { losses: r.losses, wins: r.wins, id };
-			unluckyId = id;
+			unlucky = { playerId: id, losses: r.losses };
+		}
+	}
+
+	const table = state.general.map((row) => {
+		const r = record.get(row.playerId);
+		const placements: Record<string, number> = {};
+		for (const d of state.disciplines) {
+			const place = d.placements[row.playerId];
+			if (place !== undefined) placements[d.slug] = place;
+		}
+		return {
+			playerId: row.playerId,
+			points: row.points,
+			wins: r?.wins ?? 0,
+			losses: r?.losses ?? 0,
+			placements,
+		};
+	});
+
+	// Streaks follow the order results were entered; pre-migration rows without a
+	// timestamp sort first so they don't split a later run.
+	decided.sort(
+		(a, b) => (a.decidedAt ?? "").localeCompare(b.decidedAt ?? "") || a.matchId - b.matchId,
+	);
+	const currentRun = new Map<number, number>();
+	const bestRun = new Map<number, number>();
+	for (const m of decided) {
+		for (const p of m.winners) {
+			const run = (currentRun.get(p) ?? 0) + 1;
+			currentRun.set(p, run);
+			if (run > (bestRun.get(p) ?? 0)) bestRun.set(p, run);
+		}
+		for (const p of m.losers) currentRun.set(p, 0);
+	}
+	let longestStreak: { playerId: number; length: number } | null = null;
+	for (const [id, length] of bestRun) {
+		if (
+			length >= 2 &&
+			(longestStreak === null ||
+				length > longestStreak.length ||
+				(length === longestStreak.length && id < longestStreak.playerId))
+		) {
+			longestStreak = { playerId: id, length };
 		}
 	}
 
@@ -601,6 +668,8 @@ export function recapStats(state: TournamentState): RecapStats {
 		disciplineChampions,
 		unbeatenIds,
 		mostActive,
-		unluckyId,
+		unlucky,
+		table,
+		longestStreak,
 	};
 }
