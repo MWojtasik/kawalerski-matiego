@@ -5,12 +5,26 @@ import Bracket from "@/components/Bracket";
 import GroupTable from "@/components/GroupTable";
 import JoinQr from "@/components/JoinQr";
 import { fireConfetti } from "@/lib/confetti";
-import { recentResults } from "@/lib/tournament";
+import { recentResults, upcomingMatches } from "@/lib/tournament";
 import { entrantsFor, useTournament } from "@/lib/useTournament";
-import type { DisciplineState, Entrant, Player, TournamentState } from "@/lib/types";
+import type { DisciplineState, Entrant, Match, Player, TournamentState } from "@/lib/types";
 
 const GROUP_LETTERS = ["A", "B", "C", "D"];
 const SCENE_MS = 12000;
+
+const STAGE_LABELS: Partial<Record<Match["stage"], string>> = {
+	quarter: "ćwierćfinał",
+	semi: "półfinał",
+	third: "o 3. msc",
+	final: "FINAŁ",
+};
+
+function matchLabel(match: Match): string {
+	if (match.stage === "group") {
+		return match.groupNo != null ? `gr. ${GROUP_LETTERS[match.groupNo - 1] ?? match.groupNo}` : "";
+	}
+	return STAGE_LABELS[match.stage] ?? "";
+}
 
 function useClock(): string | null {
 	const [now, setNow] = useState<string | null>(null);
@@ -81,6 +95,7 @@ export default function TvPage() {
 	}
 
 	const feed = recentResults(state, 6);
+	const upNext = upcomingMatches(state, 4);
 	const nameOf = (disciplineId: number, entrantId: number) =>
 		entrantsByDiscipline.get(disciplineId)?.get(entrantId)?.name ?? "???";
 
@@ -116,28 +131,53 @@ export default function TvPage() {
 				</section>
 			</main>
 
-			<footer className="min-h-[4.5rem] border-t border-white/10 pt-4">
-				{feed.length === 0 ? (
+			<footer className="flex min-h-[4.5rem] flex-col gap-3 border-t border-white/10 pt-4">
+				{upNext.length === 0 && feed.length === 0 ? (
 					<p className="text-center text-lg text-white/30">Wyniki pojawią się tutaj na żywo…</p>
 				) : (
-					<div className="flex items-center gap-4 overflow-hidden">
-						<span className="shrink-0 text-sm font-semibold uppercase tracking-wide text-white/40">
-							Ostatnie wyniki
-						</span>
-						<div className="flex min-w-0 flex-1 gap-3 overflow-hidden">
-							{feed.map((r, i) => (
-								<span
-									key={`${r.disciplineId}-${i}`}
-									className="shrink-0 rounded-full bg-white/5 px-4 py-2 text-lg"
-								>
-									<span className="mr-1">{r.icon}</span>
-									<span className="font-semibold text-accent">{nameOf(r.disciplineId, r.winnerId)}</span>
-									<span className="mx-1.5 text-white/40">ograł</span>
-									<span className="text-white/60">{nameOf(r.disciplineId, r.loserId)}</span>
+					<>
+						{upNext.length > 0 && (
+							<div className="flex items-center gap-4 overflow-hidden">
+								<span className="shrink-0 text-sm font-semibold uppercase tracking-wide text-accent/80">
+									▶ Kto gra?
 								</span>
-							))}
-						</div>
-					</div>
+								<div className="flex min-w-0 flex-1 gap-3 overflow-hidden">
+									{upNext.map((u) => (
+										<span
+											key={u.match.id}
+											className="shrink-0 rounded-full bg-accent/10 px-4 py-2 text-lg ring-1 ring-accent/20"
+										>
+											<span className="mr-1">{u.icon}</span>
+											<span className="mr-1.5 text-sm text-white/40">{matchLabel(u.match)}</span>
+											<span className="font-semibold">{nameOf(u.disciplineId, u.match.playerA)}</span>
+											<span className="mx-1.5 text-white/40">vs</span>
+											<span className="font-semibold">{nameOf(u.disciplineId, u.match.playerB)}</span>
+										</span>
+									))}
+								</div>
+							</div>
+						)}
+						{feed.length > 0 && (
+							<div className="flex items-center gap-4 overflow-hidden">
+								<span className="shrink-0 text-sm font-semibold uppercase tracking-wide text-white/40">
+									Ostatnie wyniki
+								</span>
+								<div className="flex min-w-0 flex-1 gap-3 overflow-hidden">
+									{feed.map((r, i) => (
+										<span
+											key={`${r.disciplineId}-${i}`}
+											className="shrink-0 rounded-full bg-white/5 px-4 py-2 text-lg"
+										>
+											<span className="mr-1">{r.icon}</span>
+											<span className="font-semibold text-accent">{nameOf(r.disciplineId, r.winnerId)}</span>
+											<span className="mx-1.5 text-white/40">ograł</span>
+											<span className="text-white/60">{nameOf(r.disciplineId, r.loserId)}</span>
+										</span>
+									))}
+								</div>
+							</div>
+						)}
+					</>
 				)}
 			</footer>
 		</div>

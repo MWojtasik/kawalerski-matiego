@@ -476,25 +476,46 @@ export interface LiveMatch {
 	match: Match;
 }
 
-/** Undecided matches in disciplines that are currently playing (group/playoff). */
-export function liveMatches(state: TournamentState, limit = 8): LiveMatch[] {
-	const items: LiveMatch[] = [];
+const STAGE_ORDER: Record<Stage, number> = { group: 0, quarter: 1, semi: 2, third: 3, final: 4 };
+
+/**
+ * Undecided matches in disciplines that are currently playing (group/playoff),
+ * in "who plays next" order: within a discipline earliest stage/round first,
+ * and disciplines interleaved so every table's next match comes before anyone's
+ * second-next (each discipline plays on its own table, in parallel).
+ */
+export function upcomingMatches(state: TournamentState, limit = 8): LiveMatch[] {
+	const perDiscipline: LiveMatch[][] = [];
 	for (const d of state.disciplines) {
 		if (d.status !== "group" && d.status !== "playoff") continue;
-		for (const m of d.matches) {
-			if (m.winnerId === null) {
-				items.push({
-					disciplineId: d.id,
-					slug: d.slug,
-					icon: d.icon,
-					name: d.name,
-					format: d.format,
-					match: m,
-				});
-			}
+		const queue = d.matches
+			.filter((m) => m.winnerId === null)
+			.sort(
+				(a, b) =>
+					STAGE_ORDER[a.stage] - STAGE_ORDER[b.stage] ||
+					(a.round ?? 0) - (b.round ?? 0) ||
+					a.id - b.id,
+			)
+			.map((m) => ({
+				disciplineId: d.id,
+				slug: d.slug,
+				icon: d.icon,
+				name: d.name,
+				format: d.format,
+				match: m,
+			}));
+		if (queue.length > 0) perDiscipline.push(queue);
+	}
+	const items: LiveMatch[] = [];
+	for (let depth = 0; items.length < limit; depth++) {
+		const row = perDiscipline.filter((queue) => depth < queue.length);
+		if (row.length === 0) break;
+		for (const queue of row) {
+			if (items.length === limit) break;
+			items.push(queue[depth]);
 		}
 	}
-	return items.slice(0, limit);
+	return items;
 }
 
 export interface RecapStats {

@@ -9,7 +9,6 @@ import {
 	expandTeamWins,
 	generalClassification,
 	groupDrawPreview,
-	liveMatches,
 	matchWins,
 	nextBracketMatches,
 	numGroupsFor,
@@ -22,6 +21,7 @@ import {
 	shuffle,
 	splitIntoGroups,
 	stageComplete,
+	upcomingMatches,
 } from "../src/lib/tournament";
 import type {
 	DisciplineState,
@@ -599,7 +599,7 @@ describe("recentResults", () => {
 	});
 });
 
-describe("liveMatches", () => {
+describe("upcomingMatches", () => {
 	it("collects undecided matches only from running disciplines", () => {
 		const state = stateOf([
 			disc({ id: 1, status: "group", matches: [pending(1, 2), match({ winner: 1, loser: 2 })] }),
@@ -607,15 +607,30 @@ describe("liveMatches", () => {
 			disc({ id: 3, slug: "pong", status: "done", matches: [pending(5, 6)] }),
 			disc({ id: 4, slug: "foos", status: "playoff", matches: [pending(7, 8)] }),
 		]);
-		const live = liveMatches(state);
-		expect(live.map((l) => l.disciplineId).sort()).toEqual([1, 4]);
+		const up = upcomingMatches(state);
+		expect(up.map((l) => l.disciplineId).sort()).toEqual([1, 4]);
+	});
+
+	it("orders a discipline's queue by stage, then round", () => {
+		const final: Match = { ...pending(1, 2), stage: "final", groupNo: null };
+		const semi: Match = { ...pending(3, 4), stage: "semi", groupNo: null };
+		const round2: Match = { ...pending(5, 6), round: 2 };
+		const round1: Match = { ...pending(7, 8), round: 1 };
+		const state = stateOf([disc({ status: "playoff", matches: [final, semi, round2, round1] })]);
+		expect(upcomingMatches(state).map((l) => l.match.playerA)).toEqual([7, 5, 3, 1]);
+	});
+
+	it("interleaves disciplines so every table's next match comes first", () => {
+		const state = stateOf([
+			disc({ id: 1, matches: [pending(1, 2), pending(3, 4)] }),
+			disc({ id: 2, slug: "dart", matches: [pending(5, 6), pending(7, 8)] }),
+		]);
+		expect(upcomingMatches(state).map((l) => l.match.playerA)).toEqual([1, 5, 3, 7]);
 	});
 
 	it("respects the limit", () => {
-		const state = stateOf([
-			disc({ matches: [pending(1, 2), pending(3, 4), pending(5, 6)] }),
-		]);
-		expect(liveMatches(state, 2)).toHaveLength(2);
+		const state = stateOf([disc({ matches: [pending(1, 2), pending(3, 4), pending(5, 6)] })]);
+		expect(upcomingMatches(state, 2)).toHaveLength(2);
 	});
 });
 
