@@ -5,7 +5,7 @@ import { useState } from "react";
 import JoinQr from "@/components/JoinQr";
 import PlayerName from "@/components/PlayerName";
 import { api, entrantsFor, myEntrantIds, useMyPlayerId, useTournament } from "@/lib/useTournament";
-import type { DisciplineState } from "@/lib/types";
+import type { DisciplineState, Player } from "@/lib/types";
 
 function statusLabel(d: DisciplineState): string {
 	if (d.status === "waiting") return "kliknij, żeby wylosować";
@@ -24,6 +24,10 @@ export default function Home() {
 	const [joining, setJoining] = useState(false);
 	const [resetOpen, setResetOpen] = useState(false);
 	const [qrOpen, setQrOpen] = useState(false);
+	const [deleteTarget, setDeleteTarget] = useState<Player | null>(null);
+	const [deletePin, setDeletePin] = useState("");
+	const [deleteError, setDeleteError] = useState<string | null>(null);
+	const [deleting, setDeleting] = useState(false);
 	const [pin, setPin] = useState("");
 
 	if (isLoading || !state) {
@@ -96,6 +100,24 @@ export default function Home() {
 		await run(() =>
 			api(`/api/players/${myPlayer.id}`, { disciplineIds: [...next] }, "PATCH"),
 		).catch(() => {});
+	}
+
+	async function confirmDelete() {
+		if (!deleteTarget || deleting) return;
+		setDeleteError(null);
+		setDeleting(true);
+		try {
+			await api(`/api/players/${deleteTarget.id}`, { pin: deletePin }, "DELETE");
+		} catch (e) {
+			setDeleteError((e as Error).message);
+			return;
+		} finally {
+			setDeleting(false);
+		}
+		if (deleteTarget.id === myPlayerId) setMyPlayerId(null);
+		setDeleteTarget(null);
+		setDeletePin("");
+		await mutate();
 	}
 
 	async function reset() {
@@ -334,12 +356,11 @@ export default function Home() {
 									{deletable && (
 										<button
 											type="button"
-											onClick={() =>
-												run(async () => {
-													await api(`/api/players/${player.id}`, undefined, "DELETE");
-													if (player.id === myPlayerId) setMyPlayerId(null);
-												}).catch(() => {})
-											}
+											onClick={() => {
+												setDeletePin("");
+												setDeleteError(null);
+												setDeleteTarget(player);
+											}}
 											className="rounded-full px-2 text-white/30 active:text-red-400"
 											aria-label={`Usuń ${player.name}`}
 										>
@@ -383,6 +404,52 @@ export default function Home() {
 						>
 							Zamknij
 						</button>
+					</div>
+				</div>
+			)}
+
+			{deleteTarget && (
+				<div
+					onClick={() => setDeleteTarget(null)}
+					className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-6"
+					role="dialog"
+					aria-modal="true"
+					aria-label={`Usuń gracza ${deleteTarget.name}`}
+				>
+					<div
+						onClick={(e) => e.stopPropagation()}
+						className="flex w-full max-w-sm flex-col gap-3 rounded-3xl bg-neutral-900 p-6"
+					>
+						<p className="font-bold">Usunąć gracza {deleteTarget.name}?</p>
+						<p className="text-sm text-white/50">
+							Znikną też jego zapisy. Potwierdź PIN-em organizatora.
+						</p>
+						<input
+							value={deletePin}
+							onChange={(e) => setDeletePin(e.target.value)}
+							onKeyDown={(e) => e.key === "Enter" && confirmDelete()}
+							placeholder="PIN"
+							autoFocus
+							className="rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 outline-none placeholder:text-white/30 focus:border-accent"
+						/>
+						{deleteError && <p className="text-sm text-red-400">{deleteError}</p>}
+						<div className="flex gap-2">
+							<button
+								type="button"
+								onClick={confirmDelete}
+								disabled={deleting}
+								className="flex-1 rounded-xl bg-red-500/20 py-2.5 text-sm font-semibold text-red-300 disabled:opacity-40"
+							>
+								{deleting ? "Usuwam… ⏳" : "Usuń"}
+							</button>
+							<button
+								type="button"
+								onClick={() => setDeleteTarget(null)}
+								className="rounded-xl bg-white/5 px-4 py-2.5 text-sm text-white/50"
+							>
+								Anuluj
+							</button>
+						</div>
 					</div>
 				</div>
 			)}
