@@ -7,6 +7,41 @@ import PlayerName from "@/components/PlayerName";
 import { api, entrantsFor, myEntrantIds, useMyPlayerId, useTournament } from "@/lib/useTournament";
 import type { DisciplineState } from "@/lib/types";
 
+function DisciplineToggle({
+	icon,
+	name,
+	on,
+	onToggle,
+}: {
+	icon: string;
+	name: string;
+	on: boolean;
+	onToggle: () => void;
+}) {
+	return (
+		<button
+			type="button"
+			onClick={onToggle}
+			aria-pressed={on}
+			className={`flex items-center gap-1.5 rounded-2xl border px-2.5 py-3 text-left transition-colors active:scale-[0.98] ${
+				on ? "border-accent/60 bg-accent/15" : "border-white/10 bg-white/5"
+			}`}
+		>
+			<span className={`text-xl ${on ? "" : "opacity-40 grayscale"}`}>{icon}</span>
+			<span className={`min-w-0 flex-1 truncate text-sm font-semibold ${on ? "" : "text-white/50"}`}>
+				{name}
+			</span>
+			<span
+				className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${
+					on ? "bg-accent text-black" : "border border-white/25 text-transparent"
+				}`}
+			>
+				✓
+			</span>
+		</button>
+	);
+}
+
 function statusLabel(d: DisciplineState): string {
 	if (d.status === "waiting") return "kliknij, żeby wylosować";
 	if (d.status === "done") return "zakończony 🏁";
@@ -139,23 +174,19 @@ export default function Home() {
 						className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none placeholder:text-white/30 focus:border-accent"
 					/>
 					<div>
-						<p className="mb-2 text-[11px] uppercase tracking-wide text-white/40">W co grasz?</p>
-						<div className="flex flex-wrap gap-2">
-							{undrawn.map((d) => {
-								const on = chosenDisciplines.includes(d.id);
-								return (
-									<button
-										key={d.id}
-										type="button"
-										onClick={() => toggleDiscipline(d.id)}
-										className={`flex-1 rounded-2xl px-2 py-3 text-sm font-semibold ${
-											on ? "bg-accent text-black" : "bg-white/5 text-white/40"
-										}`}
-									>
-										{d.icon} {d.name}
-									</button>
-								);
-							})}
+						<p className="mb-2 text-[11px] uppercase tracking-wide text-white/40">
+							W co grasz? Kliknij, żeby zaznaczyć
+						</p>
+						<div className="grid grid-cols-2 gap-2">
+							{undrawn.map((d) => (
+								<DisciplineToggle
+									key={d.id}
+									icon={d.icon}
+									name={d.name}
+									on={chosenDisciplines.includes(d.id)}
+									onToggle={() => toggleDiscipline(d.id)}
+								/>
+							))}
 						</div>
 						{drawnIds.size > 0 && (
 							<p className="mt-2 text-xs text-white/40">
@@ -190,24 +221,18 @@ export default function Home() {
 					{undrawn.length > 0 && (
 						<div>
 							<p className="mb-2 text-[11px] uppercase tracking-wide text-white/40">
-								Twoje zapisy (do losowania można zmieniać)
+								Twoje zapisy — kliknij, żeby się zapisać albo wypisać (do losowania)
 							</p>
-							<div className="flex flex-wrap gap-2">
-								{undrawn.map((d) => {
-									const on = myPlayer.disciplineIds.includes(d.id);
-									return (
-										<button
-											key={d.id}
-											type="button"
-											onClick={() => toggleMySignup(d.id)}
-											className={`rounded-2xl px-3 py-2 text-sm font-semibold ${
-												on ? "bg-accent text-black" : "bg-white/5 text-white/40"
-											}`}
-										>
-											{d.icon} {d.name}
-										</button>
-									);
-								})}
+							<div className="grid grid-cols-2 gap-2">
+								{undrawn.map((d) => (
+									<DisciplineToggle
+										key={d.id}
+										icon={d.icon}
+										name={d.name}
+										on={myPlayer.disciplineIds.includes(d.id)}
+										onToggle={() => toggleMySignup(d.id)}
+									/>
+								))}
 							</div>
 						</div>
 					)}
