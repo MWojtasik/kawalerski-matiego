@@ -1,4 +1,4 @@
-import { loadDisciplines, loadMatches, loadPlayers, loadTeams } from "./db";
+import { FINISHED_AT_KEY, getSetting, loadDisciplines, loadMatches, loadPlayers, loadTeams } from "./db";
 import {
 	bracketPlacements,
 	computeStandings,
@@ -33,11 +33,12 @@ export function groupsOf(matches: Match[]): GroupState[] {
 }
 
 export async function buildState(db: D1Database): Promise<TournamentState> {
-	const [players, disciplines, matches, teams] = await Promise.all([
+	const [players, disciplines, matches, teams, finishedAt] = await Promise.all([
 		loadPlayers(db),
 		loadDisciplines(db),
 		loadMatches(db),
 		loadTeams(db),
+		getSetting(db, FINISHED_AT_KEY),
 	]);
 
 	const disciplineStates: DisciplineState[] = disciplines.map((d) => {
@@ -74,6 +75,7 @@ export async function buildState(db: D1Database): Promise<TournamentState> {
 	return {
 		players,
 		allDrawn: disciplineStates.every((d) => d.status !== "waiting"),
+		finished: finishedAt !== null,
 		disciplines: disciplineStates,
 		general: generalClassification(
 			players.map((p) => p.id),

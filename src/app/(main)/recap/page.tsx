@@ -13,7 +13,8 @@ export default function RecapPage() {
 	const celebrated = useRef(false);
 
 	const done =
-		!!state && state.allDrawn && state.disciplines.every((d) => d.status === "done");
+		!!state &&
+		(state.finished || (state.allDrawn && state.disciplines.every((d) => d.status === "done")));
 
 	// One celebratory burst when the recap first opens on a finished tournament.
 	useEffect(() => {
@@ -38,7 +39,7 @@ export default function RecapPage() {
 				<h1 className="text-2xl font-black">Podsumowanie czeka…</h1>
 				<p className="text-white/50">
 					Turniej jeszcze trwa — rozstrzygnięte {finished} z {total} dyscyplin. Wróć, gdy poznamy
-					wszystkich mistrzów!
+					wszystkich mistrzów albo gdy organizator zakończy turniej!
 				</p>
 			</main>
 		);

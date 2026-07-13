@@ -96,6 +96,28 @@ export async function insertTeam(
 	return row!.id;
 }
 
+export async function getSetting(db: D1Database, key: string): Promise<string | null> {
+	const row = await db
+		.prepare("SELECT value FROM settings WHERE key = ?")
+		.bind(key)
+		.first<{ value: string }>();
+	return row?.value ?? null;
+}
+
+export async function putSetting(db: D1Database, key: string, value: string): Promise<void> {
+	await db
+		.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)")
+		.bind(key, value)
+		.run();
+}
+
+export async function deleteSetting(db: D1Database, key: string): Promise<void> {
+	await db.prepare("DELETE FROM settings WHERE key = ?").bind(key).run();
+}
+
+/** Settings key holding the ISO timestamp of the organizer's "finish tournament" click. */
+export const FINISHED_AT_KEY = "finished_at";
+
 /** Disciplines whose draw already happened (they have matches). */
 export async function drawnDisciplineIds(db: D1Database): Promise<Set<number>> {
 	const { results } = await db

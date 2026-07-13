@@ -58,6 +58,10 @@ export default function Home() {
 	const [error, setError] = useState<string | null>(null);
 	const [joining, setJoining] = useState(false);
 	const [resetOpen, setResetOpen] = useState(false);
+	const [finishOpen, setFinishOpen] = useState(false);
+	const [finishPin, setFinishPin] = useState("");
+	const [finishError, setFinishError] = useState<string | null>(null);
+	const [finishing, setFinishing] = useState(false);
 	const [qrOpen, setQrOpen] = useState(false);
 	const [deleteTarget, setDeleteTarget] = useState<Player | null>(null);
 	const [deletePin, setDeletePin] = useState("");
@@ -86,7 +90,11 @@ export default function Home() {
 		)
 		.slice(0, 6);
 	const top3 = state.general.filter((row) => row.points > 0).slice(0, 3);
-	const allDone = state.allDrawn && state.disciplines.every((d) => d.status === "done");
+	const allDone =
+		state.finished || (state.allDrawn && state.disciplines.every((d) => d.status === "done"));
+	const anythingPlayed = state.disciplines.some((d) =>
+		d.matches.some((m) => m.winnerId !== null),
+	);
 
 	async function run(action: () => Promise<void>) {
 		setError(null);
@@ -152,6 +160,23 @@ export default function Home() {
 		if (deleteTarget.id === myPlayerId) setMyPlayerId(null);
 		setDeleteTarget(null);
 		setDeletePin("");
+		await mutate();
+	}
+
+	async function setFinished(finished: boolean) {
+		if (finishing) return;
+		setFinishError(null);
+		setFinishing(true);
+		try {
+			await api("/api/finish", { pin: finishPin, finished });
+		} catch (e) {
+			setFinishError((e as Error).message);
+			return;
+		} finally {
+			setFinishing(false);
+		}
+		setFinishOpen(false);
+		setFinishPin("");
 		await mutate();
 	}
 
@@ -328,7 +353,7 @@ export default function Home() {
 				</div>
 			</section>
 
-			{pending.length > 0 && (
+			{!state.finished && pending.length > 0 && (
 				<section>
 					<h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-white/40">
 						Do rozegrania
@@ -477,6 +502,60 @@ export default function Home() {
 						</div>
 					</div>
 				</div>
+			)}
+
+			{(state.finished || anythingPlayed) && (
+				<section className="border-t border-white/10 pt-4">
+					{!finishOpen ? (
+						<button
+							type="button"
+							onClick={() => {
+								setFinishPin("");
+								setFinishError(null);
+								setFinishOpen(true);
+							}}
+							className="text-xs text-white/30"
+						>
+							{state.finished
+								? "Wznów turniej (cofnij zakończenie)"
+								: "🏁 Zakończ turniej i pokaż podsumowanie"}
+						</button>
+					) : (
+						<div className="flex flex-col gap-3 rounded-2xl border border-accent/30 bg-accent/5 p-4">
+							<p className="text-sm text-white/60">
+								{state.finished
+									? "Odmraża wyniki — znów będzie można wpisywać, a podsumowanie się schowa."
+									: "Zamraża wszystkie wyniki (nierozegrane mecze zostają bez zwycięzcy) i odpala podsumowanie. Da się cofnąć."}
+							</p>
+							<input
+								value={finishPin}
+								onChange={(e) => setFinishPin(e.target.value)}
+								onKeyDown={(e) => e.key === "Enter" && setFinished(!state.finished)}
+								placeholder="PIN"
+								autoFocus
+								className="rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 outline-none placeholder:text-white/30 focus:border-accent"
+							/>
+							{finishError && <p className="text-sm text-red-400">{finishError}</p>}
+							<div className="flex gap-2">
+								<button
+									type="button"
+									onClick={() => setFinished(!state.finished)}
+									disabled={finishing}
+									className="flex-1 rounded-xl bg-accent py-2.5 text-sm font-bold text-black disabled:opacity-40"
+								>
+									{finishing ? "Chwila… ⏳" : state.finished ? "Wznów turniej" : "🏁 Zakończ turniej"}
+								</button>
+								<button
+									type="button"
+									onClick={() => setFinishOpen(false)}
+									className="rounded-xl bg-white/5 px-4 py-2.5 text-sm text-white/50"
+								>
+									Anuluj
+								</button>
+							</div>
+						</div>
+					)}
+				</section>
 			)}
 
 			<section className="border-t border-white/10 pt-4">

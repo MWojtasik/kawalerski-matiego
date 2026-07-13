@@ -557,7 +557,7 @@ function disc(over: Partial<DisciplineState>): DisciplineState {
 }
 
 function stateOf(disciplines: DisciplineState[]): TournamentState {
-	return { players: [], allDrawn: false, disciplines, general: [] };
+	return { players: [], allDrawn: false, finished: false, disciplines, general: [] };
 }
 
 /** decided match with an explicit timestamp */
@@ -648,6 +648,7 @@ describe("recapStats", () => {
 				{ id: 3, name: "C", disciplineIds: [1] },
 			],
 			allDrawn: true,
+			finished: false,
 			disciplines: [disc({ status: "done", matches, placements: { 1: 1, 2: 2, 3: 3 } })],
 			general: [
 				{ playerId: 1, points: 2, breakdown: { bilard: 2 } },
@@ -679,6 +680,7 @@ describe("recapStats", () => {
 				{ id: 2, name: "B", disciplineIds: [1] },
 			],
 			allDrawn: true,
+			finished: false,
 			disciplines: [
 				disc({
 					status: "done",
@@ -759,6 +761,7 @@ describe("recapStats", () => {
 		const state: TournamentState = {
 			players: [4, 5, 6, 7].map((id) => ({ id, name: `P${id}`, disciplineIds: [2] })),
 			allDrawn: true,
+			finished: false,
 			disciplines: [
 				disc({
 					id: 2,

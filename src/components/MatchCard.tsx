@@ -8,12 +8,15 @@ export default function MatchCard({
 	entrantsById,
 	onClick,
 	subtitle,
+	locked,
 	meIds,
 }: {
 	match: Match;
 	entrantsById: Map<number, Entrant>;
 	onClick?: () => void;
 	subtitle?: string;
+	/** results are frozen (tournament finished) — hide the "kto wygrał?" nudge */
+	locked?: boolean;
 	/** entrant ids to highlight as the current device's player */
 	meIds?: Set<number>;
 }) {
@@ -40,11 +43,16 @@ export default function MatchCard({
 						{winnerB && <span className="ml-1.5">✅</span>}
 					</span>
 				</div>
-				{!played && (
-					<span className="rounded-full bg-accent/15 px-3 py-1 text-xs font-semibold text-accent">
-						kto wygrał?
-					</span>
-				)}
+				{!played &&
+					(locked ? (
+						<span className="rounded-full bg-white/5 px-3 py-1 text-xs font-semibold text-white/40">
+							nierozegrany 🔒
+						</span>
+					) : (
+						<span className="rounded-full bg-accent/15 px-3 py-1 text-xs font-semibold text-accent">
+							kto wygrał?
+						</span>
+					))}
 			</div>
 		</button>
 	);

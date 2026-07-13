@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getEnv } from "@/lib/db";
+import { deleteSetting, FINISHED_AT_KEY, getEnv } from "@/lib/db";
 
 export async function POST(request: Request) {
 	const env = await getEnv();
@@ -12,6 +12,8 @@ export async function POST(request: Request) {
 		return NextResponse.json({ error: "Zły PIN" }, { status: 403 });
 	}
 	const db = env.DB;
+	// Any reset means the tournament is being played again — lift the finish freeze.
+	await deleteSetting(db, FINISHED_AT_KEY);
 	if (body.scope === "discipline") {
 		if (!body.disciplineId) {
 			return NextResponse.json({ error: "Brak dyscypliny" }, { status: 400 });

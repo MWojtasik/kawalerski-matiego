@@ -81,6 +81,8 @@ export interface TournamentState {
 	players: Player[];
 	/** every discipline has been drawn — signups fully closed */
 	allDrawn: boolean;
+	/** organizer ended the tournament early — results frozen, recap unlocked */
+	finished: boolean;
 	disciplines: DisciplineState[];
 	general: GeneralRow[];
 }

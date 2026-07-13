@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getDb, insertMatch, toMatch, type MatchRow } from "@/lib/db";
+import { FINISHED_AT_KEY, getDb, getSetting, insertMatch, toMatch, type MatchRow } from "@/lib/db";
 import { groupsOf } from "@/lib/state";
 import { nextBracketMatches, seedPlayoff, stageComplete } from "@/lib/tournament";
 import type { DisciplineFormat, Match } from "@/lib/types";
@@ -17,6 +17,12 @@ export async function POST(
 	{ params }: { params: Promise<{ id: string }> },
 ) {
 	const db = await getDb();
+	if ((await getSetting(db, FINISHED_AT_KEY)) !== null) {
+		return NextResponse.json(
+			{ error: "Turniej zakończony 🏁 — wyniki zamrożone (organizator może wznowić na stronie głównej)" },
+			{ status: 409 },
+		);
+	}
 	const { id } = await params;
 	const match = await db
 		.prepare("SELECT * FROM matches WHERE id = ?")

@@ -95,7 +95,8 @@ export default function TvPage() {
 	}
 
 	const feed = recentResults(state, 6);
-	const upNext = upcomingMatches(state, 4);
+	// Once the organizer ends the tournament the remaining matches won't happen.
+	const upNext = state.finished ? [] : upcomingMatches(state, 4);
 	const nameOf = (disciplineId: number, entrantId: number) =>
 		entrantsByDiscipline.get(disciplineId)?.get(entrantId)?.name ?? "???";
 

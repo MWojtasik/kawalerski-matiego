@@ -41,6 +41,7 @@ export default function DisciplinePage({ params }: { params: Promise<{ slug: str
 	}
 
 	const isBracket = discipline.format === "bracket2v2";
+	const frozen = state.finished;
 	const eligible = state.players.filter((p) => p.disciplineIds.includes(discipline.id));
 
 	const header = (
@@ -49,7 +50,9 @@ export default function DisciplinePage({ params }: { params: Promise<{ slug: str
 			<div>
 				<h1 className="text-2xl font-black">{discipline.name}</h1>
 				<p className="text-xs text-white/50">
-					{discipline.status === "waiting"
+					{frozen
+						? "Turniej zakończony 🏁 — wyniki zamrożone"
+						: discipline.status === "waiting"
 						? isBracket
 							? "Czeka na losowanie drużyn"
 							: "Czeka na losowanie grup"
@@ -233,7 +236,7 @@ export default function DisciplinePage({ params }: { params: Promise<{ slug: str
 					matches={discipline.matches}
 					groups={discipline.groups}
 					entrantsById={entrantsById}
-					onSelect={setSelected}
+					onSelect={(m) => !frozen && setSelected(m)}
 					format={discipline.format}
 					meIds={meIds}
 				/>
@@ -305,7 +308,8 @@ export default function DisciplinePage({ params }: { params: Promise<{ slug: str
 								match={m}
 								entrantsById={entrantsById}
 								subtitle={m.round ? `Runda ${m.round}` : undefined}
-								onClick={() => setSelected(m)}
+								onClick={() => !frozen && setSelected(m)}
+								locked={frozen}
 								meIds={meIds}
 							/>
 						))}
@@ -318,7 +322,7 @@ export default function DisciplinePage({ params }: { params: Promise<{ slug: str
 					matches={discipline.matches}
 					groups={discipline.groups}
 					entrantsById={entrantsById}
-					onSelect={setSelected}
+					onSelect={(m) => !frozen && setSelected(m)}
 					meIds={meIds}
 				/>
 			)}
